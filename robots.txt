@@ -2,6 +2,6 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://neonmint.efeele.dev/sitemap-index.xml
+Sitemap: https://ogyco.github.io/sitemap-index.xml
 
 
