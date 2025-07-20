@@ -1,6 +1,7 @@
 ---
 import BlogPost from "./BlogPost.astro";
 import Heading from "../ui/Heading.astro";
+import { Icon } from "astro-icon/components";
 
 // Prop to determine whether to exclude the latest post or a specific post
 export interface Props {
@@ -65,6 +66,7 @@ if (!all) {
   {
     showTitle && !all && (
       <div class="flex gap-4 pb-6 items-center text-center justify-center">
+        <Icon class="text-3xl dark:text-white text-blacktext" name="markdown" />
         <Heading text={titleText} textGradient={titleGradient} level={2} />
       </div>
     )
