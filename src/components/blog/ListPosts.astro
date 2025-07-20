@@ -7,9 +7,19 @@ export interface Props {
   excludeLatest?: boolean;
   currentPostUrl?: string;
   all?: boolean;
+  showTitle?: boolean;
+  titleText?: string;
+  titleGradient?: string;
 }
 
-const { excludeLatest = false, currentPostUrl = "", all = false } = Astro.props;
+const {
+  excludeLatest = false,
+  currentPostUrl = "",
+  all = false,
+  showTitle = false,
+  titleText = "Newest",
+  titleGradient = "Posts",
+} = Astro.props;
 
 const allPosts = await Astro.glob("../../pages/blog/posts/*.md");
 // Sort by date in descending order (newest first)
@@ -49,6 +59,13 @@ if (!all) {
     all && (
       <div class="flex gap-4 pb-6 items-center text-center justify-center">
         <Heading text="All" textGradient="Posts" level={2} />
+      </div>
+    )
+  }
+  {
+    showTitle && !all && (
+      <div class="flex gap-4 pb-6 items-center text-center justify-center">
+        <Heading text={titleText} textGradient={titleGradient} level={2} />
       </div>
     )
   }

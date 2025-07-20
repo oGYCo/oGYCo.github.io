@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import Experience from "../components/portfolio/Experience.astro";
 import HeroIndex from "../components/portfolio/HeroIndex.astro";
 import ListProjects from "../components/portfolio/ListProjects.astro";
+import ListPosts from "../components/blog/ListPosts.astro";
 const pageTitle = "My Page | oGYCo ";
 const description = "Homepage of oGYCo";
 const ogimage = {
@@ -13,6 +14,7 @@ const ogimage = {
 
 <Layout pageTitle={pageTitle} description={description} ogimage={ogimage}>
   <HeroIndex />
+  <ListPosts showTitle={true} titleText="Newest" titleGradient="Posts" />
   <Experience />
   <ListProjects />
 </Layout>
