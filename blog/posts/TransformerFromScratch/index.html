@@ -130,7 +130,7 @@ oGYCo
 <ul>
 <li>“It expands the model’s ability to focus on different positions.”
 <ul>
-<li>每个头关注的是不同的信息，然后这样就能学到更加丰富的内容</li>
+<li>每个头关注的是不同的信息，然后这样就能学到更加丰富的内容，注意力是加权平均的操作：每个位置是看“所有其他位置”的加权和，所以这种“平均”会有可能模糊具体细节，尤其是当多个位置有相似内容时。多头注意力用多个“注意力头”同时从不同角度学习注意力权重，可以一定程度上保留更多细粒度信息。Transformer 能快速捕捉远程依赖，但注意力有平均化的副作用，作者通过多头注意力来缓解这个问题。</li>
 </ul>
 </li>
 <li>“It gives the attention layer multiple ‘representation subspaces’”</li>
