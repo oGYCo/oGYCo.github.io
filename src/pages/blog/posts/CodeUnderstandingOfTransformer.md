@@ -15,6 +15,8 @@ languages: ["python"]
 ---
 全文主要由AI生成，是根据[哈弗Annotated Transformer代码实现](https://nlp.seas.harvard.edu/annotated-transformer/)进行的代码解释
 
+关于Transformer的内容理解见[Transformer From Scratch](https://ogyco.github.io/blog/posts/TransformerFromScratch/)
+
 ## 单元格 6：导入所有需要的库
 
 ### **是什么：** 系统交互工具
