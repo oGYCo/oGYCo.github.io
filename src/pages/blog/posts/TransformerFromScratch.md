@@ -15,7 +15,7 @@ languages: ["python"]
 ---
 本文主要是对于transformer的每个部分的深入理解加上对于代码的部分关键信息进行解读和补充
 
-关于代码的全部解释请见文章[Transformer代码深入理解](https://ogyco.github.io/blog/posts/TransformerFromScratch/)，建议两者结合阅读，先看本文的**非折叠内容**理解整个架构的设计以及详细解释，然后再看代码理解的文章同时遇到关键的部分再回到本文的折叠区看相关代码的解释
+关于代码的全部解释请见文章[Transformer代码深入理解](https://ogyco.github.io/blog/posts/CodeUnderstandingOfTransformer/)，建议两者结合阅读，先看本文的**非折叠内容**理解整个架构的设计以及详细解释，然后再看代码理解的文章同时遇到关键的部分再回到本文的折叠区（即“工程代码解读部分”）看相关代码的关键部分的解释
 
 ## 参考资料
 - [图解transformer](https://jalammar.github.io/illustrated-transformer/)
@@ -61,7 +61,9 @@ class EncoderDecoder(nn.Module):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
 ```
 
-src为什么还需要掩码的部分
+src和src_mask的区别：input是长短不一的，所以需要为input加上pad，即把短句子用一个特殊的“占位符”（比如 <pad>）补齐，让它们和最长的句子一样长src，但是在计算的过程中**这些位置是不需要被关注**的，所以需要对这些pad区域进行掩码，故而有了src_mask，格式类似于`[True, True, True, True, True, False, False, False]`
+
+tgt和tgt_mask在src掩码的基础上还加入了不让前面的token看到后面token的掩码，pad掩码部分和src一样
 
 </details>
 

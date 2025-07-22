@@ -4,12 +4,12 @@ title: Transformer代码深入理解
 author: oGYCo
 description: "Annotated Transformer"
 image:
-  url: "/images/posts/Annotated Transformer.png"
+  url: "/images/posts/Annotated_Transformer.png"
   alt: "Harvard's code of transformer"
 pubDate: 2025-07-22
 tags:
   [
-    "AI", "Model Architecture"
+    "AI", "Model Architecture","AIGC"
   ]
 languages: ["python"]
 ---
@@ -617,7 +617,7 @@ def forward(self, src, tgt, src_mask, tgt_mask):
 
 **掩码机制的重要性：**
 - `src_mask`：隐藏源序列的填充部分
-- `tgt_mask`：隐藏目标序列的未来信息（因果掩码）
+- `tgt_mask`：隐藏目标序列的填充部分和未来信息（因果掩码）
 
 **方法设计的解耦原则：**
 ```python
