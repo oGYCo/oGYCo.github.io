@@ -13,6 +13,10 @@ tags:
   ]
 languages: ["python"]
 ---
+本文主要是对于transformer的每个部分的深入理解加上对于代码的部分关键信息进行解读和补充
+
+关于代码的全部解释请见文章[Transformer代码深入理解](https://ogyco.github.io/blog/posts/TransformerFromScratch/)，建议两者结合阅读，先看本文的**非折叠内容**理解整个架构的设计以及详细解释，然后再看代码理解的文章同时遇到关键的部分再回到本文的折叠区看相关代码的解释
+
 ## 参考资料
 - [图解transformer](https://jalammar.github.io/illustrated-transformer/)
 - [哈弗-代码实现](https://nlp.seas.harvard.edu/annotated-transformer/)
@@ -30,6 +34,7 @@ languages: ["python"]
 
 <details>
 <summary>工程代码解读</summary>
+
 ```python
 class EncoderDecoder(nn.Module):
     """
@@ -56,8 +61,9 @@ class EncoderDecoder(nn.Module):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
 ```
 
-</details>
+src为什么还需要掩码的部分
 
+</details>
 
 ## 第一步—Tokenization & Embedding & Positional Encoding
 
