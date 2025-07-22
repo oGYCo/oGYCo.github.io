@@ -908,6 +908,8 @@ def forward(self, x, mask):
 4. **最终归一化**：输出前进行层归一化处理
 
 **为什么在最后进行层归一化：**
+确保编码器的最终输出具有稳定的数值分布，为后续的解码器或其他组件提供良好的输入。
+经过6层的残差连接后，数值可能会发生累积偏移，最后的归一化起到校正作用。
 ```python
 return self.norm(x)
 ```
@@ -1033,6 +1035,11 @@ print(after.std(-1))   # 接近 [1, 1]
 ```
 
 这种标准化确保了神经网络中每一层都能接收到**数值稳定、分布一致**的输入，是Transformer稳定训练的重要基础。
+```python
+class Encoder(nn.Module):
+    "Core encoder is a stack of N layers"
+
+    def __init__(self, layer, N):
         super(Encoder, self).__init__()
         self.layers = clones(layer, N)
         self.norm = LayerNorm(layer.size)
@@ -1048,12 +1055,14 @@ print(after.std(-1))   # 接近 [1, 1]
 编码器的任务是理解输入序列（比如一个德语句子），并将其转换为一系列向量表示，这些向量包含了句子的语义信息。
 
 **构造函数分析：**
+
 ```python
 def __init__(self, layer, N):
     super(Encoder, self).__init__()
     self.layers = clones(layer, N)
     self.norm = LayerNorm(layer.size)
 ```
+
 - `layer`：单个编码器层的模板
 - `N`：编码器层的数量（论文中是 6）
 - `self.layers = clones(layer, N)`：创建 N 个相同的编码器层
@@ -1138,12 +1147,6 @@ return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
 - 对于形状为 `[batch_size, sequence_length, features]` 的张量
 - 我们在 `features` 维度上进行归一化
 - 这意味着每个位置的特征向量都被独立归一化
-
----
-
-## 继续更新解释...
-
-让我继续为你解释更多的代码部分。现在我们已经覆盖了基础架构，接下来会涉及更多核心组件，如注意力机制等。这些内容会更加深入，但我会保持同样详细的解释风格。
 
 ---
 
@@ -1432,6 +1435,7 @@ output = x + dropout(ff_output)
 
 这种双阶段设计使得编码器层既能捕获**序列内的关系**（通过自注意力），又能进行**深度的特征变换**（通过前馈网络），是Transformer强大表示能力的核心。
 
+```python
     def forward(self, x, mask):
         "Follow Figure 1 (left) for connections."
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))

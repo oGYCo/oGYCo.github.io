@@ -83,6 +83,30 @@ tgt和tgt_mask在src掩码的基础上还加入了不让前面的token看到后�
 
 过程：整个架构就是完成一个input序列到一个putput序列的任务，而encoder负责的就是input的部分。编码器会接受一个向量列表作为输入（最开始是嵌入向量和位置向量的和），然后经过注意力层和前馈层之后传递到下一个encoder，经过多个encoder最后得到了一个向量列表会用于decoder的cross-attention层
 
+<details>
+<summary>工程代码解读</summary>
+
+```python
+class Encoder(nn.Module):
+    "Core encoder is a stack of N layers"
+
+    def __init__(self, layer, N):
+        super(Encoder, self).__init__()
+        self.layers = clones(layer, N)
+        self.norm = LayerNorm(layer.size)
+
+    def forward(self, x, mask):
+        "Pass the input (and mask) through each layer in turn."
+        for layer in self.layers:
+            x = layer(x, mask)
+        return self.norm(x)
+```
+
+这里与原论文采用的有一点略微的差别，是更现代的方式，原论文中是Post-LN结构，也就是先经过子层然后再残差连接与层归一化，而这里则用的是Pre-LN结构，也就是先进行层归一化，再通过子层，然后进行残差连接，然后在通过了N个decoder层之后最后再来一次层归一化，例如6层的结构也就是进行了13次层归一化操作，而原论文中则只会进行12次层归一化操作。这样做的原因是在后续的研究和实践中，大家发现将层归一化放在前面（即 Pre-LN）会让训练过程更稳定，尤其是在模型层数很深的时候。很多现代的 Transformer 实现（比如 GPT-2/3 和 BERT 的一些变体）都采用了这种结构。
+
+>整个Encoder是6个EncoderLayer组成，每个EncoderLayer包含两个SublayerConnection，第一个是经过先层归一化然后经过注意力层然后进行dropout正则化再残差连接，第二是经过先层归一化然后经过FFN层然后进行dropout正则化再残差连接
+</details>
+
 ### 注意力机制
 
 自注意力机制就是让每个单独的token学到语境信息并更新，即让每个token向量变成一个在语境信息中更加准确的向量，从而将每个token转化为该token在语境中的高维精确的表达。
@@ -145,7 +169,11 @@ tgt和tgt_mask在src掩码的基础上还加入了不让前面的token看到后�
 
 如果模型发现不需要做任何改变，它只需要让自注意力层输出一个零向量就行了，这比学习一个恒等变换（输入什么输出什么）要容易得多。
 ![残差网络的意义](/images/posts/t-7.png)
+
 ### 层归一化
+层归一化是一种技术，它针对单个样本的所有特征（即单个向量内部），通过调整其数值的分布，使其变得“整齐”（通常是均值为0，方差为1），从而让神经网络的训练过程更快速、更稳定
+
+在 Transformer 的 Encoder 或 Decoder 层中，数据是以 [批次大小, 序列长度, 嵌入维度] 的形式流动的。层归一化（LN）作用在最后一个维度上。也就是说，它会独立地处理序列中的每一个词元（Token），对这个词元的整个 512 维的嵌入向量进行归一化操作
 
 ## 第三步—Decoder
 Decoder负责的是Output序列，整个过程就是不断的将decoder的输出作为新的输入给decoder然后让decoder不断生成下一个token直到生成一个特殊的结束token
@@ -155,6 +183,14 @@ Decoder负责的是Output序列，整个过程就是不断的将decoder的输出
 在推理的时候，Decoder处理的第一个Token向量来自于一个人为添加的、代表“句子开始”的特殊标记，通常被称为 <sos> (Start of Sequence) 或 <bos> (Begin of Sequence)，然后模型就可以不断的进行生成了
 
 在训练时，Transformer用了一个“障眼法”（Mask），让GPU可以同时为序列中的每一个位置都执行一次“一次只预测一个词”的任务，从而把原本需要N步的串行计算，变成了一步完成的并行计算，极大地加速了训练过程。这个设计正是Transformer能够处理长序列并在大规模数据上成功训练的关键之一
+
+<details>
+<summary>工程代码解读</summary>
+
+>Decoder也是由6个DecoderLayer组成，每个DecoderLayer则是由三个SubLayerConnection做成，第一个是先经过层归一化然后再经过注意力层（这里需要用到特别的掩码即既有对pad的掩码，也有对未来token的掩码）然后再dropout正则化然后再残差连接，第二个是先经过层归一化然后再经过cross-attention层（即K、V来自encoder，Q来自上一个DecoderLayer的输出）然后dropout正则化然后再残差连接，第三个是先经过层归一化然后再经过FFN然后dropout正则化然后残差连接
+
+</details>
+
 ### 掩码注意力
 掩码的目的主要是用在模型训练的时候。
 在训练时，我们已经拥有了完整的源句子和对应的目标句子，输入的准备如图
