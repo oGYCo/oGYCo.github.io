@@ -70,126 +70,164 @@ oGYCo
 </ul>
 </li>
 </ul>
-<h2 id="第一步tokenization--embedding--positional-encoding">第一步—Tokenization &#x26; Embedding &#x26; Positional Encoding</h2>
-<h3 id="分词">分词</h3>
-<h3 id="嵌入向量">嵌入向量</h3>
-<h3 id="位置编码">位置编码</h3>
-<p>如果只是有注意力和全连接层，一段序列的位置关系就会被忽略，所以需要引入位置编码
-所谓的位置编码就是给embedding之后的向量加上了一个相同维度的代表这token位置信息的向量（遵循一定的模式），注意是两个向量相加，不是直接拼接在原本的向量后面，虽然应该也可以，但是那样会增加向量的维度导致后面需要的参数量也更多。</p>
-<h4 id="遵循什么模式呢">遵循什么模式呢？</h4>
-<p>位置编码会有不同的方式，通过不同的函数生成</p>
-<h2 id="第二步encoder">第二步—Encoder</h2>
-<p>过程：整个架构就是完成一个input序列到一个putput序列的任务，而encoder负责的就是input的部分。编码器会接受一个向量列表作为输入（最开始是嵌入向量和位置向量的和），然后经过注意力层和前馈层之后传递到下一个encoder，经过多个encoder最后得到了一个向量列表会用于decoder的cross-attention层</p>
-<h3 id="注意力机制">注意力机制</h3>
-<p>自注意力机制就是让每个单独的token学到语境信息并更新，即让每个token向量变成一个在语境信息中更加准确的向量，从而将每个token转化为该token在语境中的高维精确的表达。</p>
-<p>例如：”<code>The animal didn't cross the street because it was too tired</code>”
-比如该句子中的it指代的是the animal，但是一个简单的it的嵌入向量只能表达最基本的代词含义，现在需要让这个it“注意到”animal，从而将这两个词联系起来，即是计算注意力分数然后根据animal的注意力分数较高，会让之后由animal得到的V向量的权重较大，使得animal对it的更新效果更加显著。当然，一个token对自身的注意力权重通常都比较显著，以确保其核心身份信息不会丢失。但最高的注意力权重会动态地分配给当前上下文中最重要的token(s)，这其中可能包括它自己，也可能包括其他的token。例如对于 <code>it</code> 来说，<code>animal</code> 的上下文信息可能比 <code>it</code> 本身的（作为代词的）信息更重要。在这种情况下，模型可能会学到给 <code>animal</code> 分配比 <code>it</code> 自身更高的注意力权重。</p>
-<ul>
-<li>自注意力机制通过一个<strong>加权求和</strong>过程，让每个token的向量表示融合来自句子中其他token（尤其是最相关的token）的上下文信息。在这个过程中，通过自身的注意力权重和至关重要的<strong>残差连接（为什么要引入<a href="#%E6%AE%8B%E5%B7%AE%E8%BF%9E%E6%8E%A5">残差连接</a>）</strong>，它又能确保token不会“忘记”自己是谁，从而实现对原始信息的保留和对上下文信息的精确更新。</li>
-<li><strong>自注意力机制的核心任务，就是计算出那个需要被加到原始向量上的“更新向量”或“残差向量”，然后与原始向量相加就得到了最后更新的向量</strong></li>
-<li>具体过程
-<ul>
-<li>
-<p>第一步：将原始向量与三个矩阵Wq、Wk、Wv分别相乘得到Q向量、K向量、V向量，即一层注意力的参数就是Wq、Wk、Wv三个矩阵</p>
-<p><img src="/images/posts/t-1.png" alt="Transformer QKV矩阵计算"></p>
-</li>
-<li>
-<p>第二步：然后得到了三个矩阵Q、K、V，再让Q矩阵和K矩阵相乘得到每个向量与其他每个向量的注意力分数，K矩阵需要转置，就得到了向量的点积矩阵（注意力分数矩阵），注意这里注意力分数还要进行除以根号下dk（向量的维度）（防止产生过大的注意力分数和梯度消失问题，让模型无法学习多样化的信息，即最后的softmax结果几乎是一个one-shot向量）和一个softmax操作（让权重和为1，且都是非负数，这样的权重可以被理解为一个<strong>概率分布</strong>，它告诉我们应该将100%的“注意力”如何分配给序列中的所有token）</p>
-<p><img src="/images/posts/t-2.png" alt="注意力分数计算公式"></p>
-<p><img src="/images/posts/t-3.png" alt="注意力机制详细流程"></p>
-<p><img src="/images/posts/t-4.png" alt="Softmax函数应用"></p>
-<ul>
-<li>
-<p>梯度消失的原因，当产生的数值特别大的时候，变化几乎不会导致结果的变化，也就是梯度为0，模型就会认为不需要再继续训练了</p>
-<p><img src="/images/posts/t-5.png" alt="梯度消失问题示意图"></p>
-</li>
-</ul>
-</li>
-<li>
-<p>第三步：然后再根据注意力分数对V向量进行加权求和</p>
-<p><img src="/images/posts/t-6.png" alt="注意力加权求和计算"></p>
-</li>
-</ul>
-</li>
-<li>论文中所用的实际上是<a href="#%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6">多头注意力</a>来计算，也就是算出来的q、k、v向量跟原本的向量不是同一个维度，例如原向量是512维的，现在算出来的q、k、v都是64维度的</li>
-<li>在实际的计算过程中用到的是矩阵计算，如图所示：
-<ul>
-<li>算Q、K、V矩阵：例如2个512维的向量，就是一个2 * 512的矩阵，然后乘以一个512 * 64的矩阵得到了两个64维的矩阵
-<img src="/images/posts/self-attention-matrix-calculation.png" alt=""></li>
-<li>算注意力矩阵:Q为2 * 64的矩阵，乘以K的转置，也就是64 * 2的矩阵，也就得到一个2 * 2的注意力分数矩阵，这样算出来就是例如[1][1]的数值就是第一个向量对第一个向量的注意力,[1][2]就是第一个向量对第二个向量的注意力。然后除以根号下dk(key向量的维度)，然后再做softmax，显然这里的softmax的计算就是对注意力矩阵的每个行向量进行操作，即每个行向量是作为一组来操作的
-<img src="/images/posts/self-attention-matrix-calculation-2.png" alt=""></li>
-</ul>
-</li>
-</ul>
-<h3 id="多头注意力机制">多头注意力机制</h3>
-<h4 id="过程">过程</h4>
-<p>所谓的多头注意力就是原本是将原向量乘以三个矩阵：Wq、Wk、Wv转（线性变换）成维度相同的向量然后就可以一次性完成一次的注意力层，然后多头注意力就是变成了将原向量线性变换为了低维度的3个向量，例如原向量是512维的，现在得到的q、k、v都是64维度的，然后就会有8组Wq、Wk、Wv矩阵完整8次转化，每一组最终都会得到一个包含64维度向量组成的矩阵n * 64，然后把8组的矩阵拼接起来就是一个包含512维度向量的矩阵n * 512，注意这样直接拼接起来并不好，因为信息相当于是割裂的，就需要再乘以一个512 * 512的矩阵相当于把8个64维度的<strong>信息片段</strong>的信息进行整合，重新变成一个<strong>完整</strong>的向量。
-<img src="/images/posts/transformer_attention_heads_qkv.png" alt=""></p>
-<h4 id="为什么这样做">为什么这样做</h4>
-<p>为什么不直接将Q、K、V变换为512维度的呢？这样不是更加方便吗，分成8次的注意力计算有什么好处？最后还要再乘以一个矩阵来整合信息,还增加了参数量和计算量</p>
-<ul>
-<li>“It expands the model’s ability to focus on different positions.”
-<ul>
-<li>每个头关注的是不同的信息，然后这样就能学到更加丰富的内容，注意力是加权平均的操作：每个位置是看“所有其他位置”的加权和，所以这种“平均”会有可能模糊具体细节，尤其是当多个位置有相似内容时。多头注意力用多个“注意力头”同时从不同角度学习注意力权重，可以一定程度上保留更多细粒度信息。Transformer 能快速捕捉远程依赖，但注意力有平均化的副作用，作者通过多头注意力来缓解这个问题。</li>
-</ul>
-</li>
-<li>“It gives the attention layer multiple ‘representation subspaces’”</li>
-</ul>
-<p>这么看的话，transformer就跟CNN很相似了，每个注意力头关注的是不同的地方，然后通过乘以一个大的变换矩阵就形成更大的特征提取与融合</p>
-<h3 id="前馈神经网络">前馈神经网络</h3>
-<h3 id="残差连接">残差连接</h3>
-<p>残差连接就是让经过了注意力层或者FFN生成的向量和原本的没有经过网络的向量直接相加之后再进行层归一化处理</p>
-<p>理论上来说，更深的网络一定不会比浅的网络的性能差，因为深的网络只需要让后面的层变成恒等变换层就会与浅层网络一样，但是实践上发现要让网络拟合出一个恒等变换是很困难的，而网络拟合一个0函数就很简单，即让F(x)=0，因为只需要让权重全部变成0就可以了。于是就引入了残差连接，即让网络学习的是输入与输出之间的差函数，这样，一个恒等变换网络就等于一个残差为0的网络加上残差连接即可。而注意力层就是学习的残差函数</p>
-<blockquote>
-<p>残差连接改变了自注意力层的<strong>学习目标</strong></p>
-</blockquote>
-<ul>
-<li><strong>没有残差连接时</strong>：自注意力层需要学习一个完整的变换函数 <code>H(x)</code>，直接输出最终的目标向量。这很难。</li>
-<li><strong>有残差连接时</strong>：自注意力层只需要学习<strong>残差（Residual）</strong> <code>F(x) = H(x) - x</code>。也就是说，它只需要学习“<strong>需要做的改变量</strong>”或者说“<strong>更新量</strong>”。</li>
-</ul>
-<p>如果模型发现不需要做任何改变，它只需要让自注意力层输出一个零向量就行了，这比学习一个恒等变换（输入什么输出什么）要容易得多。
-<img src="/images/posts/t-7.png" alt="残差网络的意义"></p>
-<h3 id="层归一化">层归一化</h3>
-<h2 id="第三步decoder">第三步—Decoder</h2>
-<p>Decoder负责的是Output序列，整个过程就是不断的将decoder的输出作为新的输入给decoder然后让decoder不断生成下一个token直到生成一个特殊的结束token</p>
-<blockquote>
-<p>重要：所谓的生成下一个token就是每一个token经过decoder之后就会生成一个代表概率的向量，向量的某个位置的值代表着当前token对于下一个token在这个index下（例如向量的第5维度代表着词表中的某个特定的词）对应的词的概率，也就是说<strong>每个token经过decoder之后都会生成一个预测向量</strong>，只不过在推理阶段我们只需要取最后一个token的预测向量来生成下一个词而已，而在推理的时候则是会用到所有token生成的预测向量，看看这个预测向量代表的词和实际的标签是否相符合罢了</p>
-</blockquote>
-<p>在推理的时候，Decoder处理的第一个Token向量来自于一个人为添加的、代表“句子开始”的特殊标记，通常被称为 <sos> (Start of Sequence) 或 <bos> (Begin of Sequence)，然后模型就可以不断的进行生成了</bos></sos></p>
-<p>在训练时，Transformer用了一个“障眼法”（Mask），让GPU可以同时为序列中的每一个位置都执行一次“一次只预测一个词”的任务，从而把原本需要N步的串行计算，变成了一步完成的并行计算，极大地加速了训练过程。这个设计正是Transformer能够处理长序列并在大规模数据上成功训练的关键之一</p>
-<h3 id="掩码注意力">掩码注意力</h3>
-<p>掩码的目的主要是用在模型训练的时候。
-在训练时，我们已经拥有了完整的源句子和对应的目标句子，输入的准备如图
-<img src="/images/posts/train-encoder.png" alt="">
-也就是说，在训练的时候，输入了sos，然后让模型根据sos和原始的输入来预测下一个词也就是Wie，即前向传播一次，然后再反向传播进行梯度下降来修改参数让模型预测的更准确，然后输入sos、Wie让模型预测geht，以此类推，这样sos和eos的加入刚好让标签和实际输入错开了，从而保证了自回归生成。但是！！！注意了，实际训练过程，加上了sos的序列会被全部放进encoder中</p>
-<p>为什么？不是一次只能预测一个词吗（对也不对）</p>
-<p>实际上decoder是能够一次性预测所有的词的，只不过是推理的时候只用到了最后一个token的预测，而在训练的时候是会用到所有的token的预测的，也就是根据预测来反向传播调整参数</p>
-<p>那么这个时候就需要引入掩码了，因为预测的时候不能让当前token看到他后面的token（也就是实际的“答案”）</p>
-<h4 id="掩码操作">掩码操作</h4>
-<p>例如，当计算第三个位置（“geht”）的输出时，自注意力机制会计算它与序列中所有其他词的“注意力分数”。Mask矩阵会强行将它与自己及之后位置（“geht”, “es”）的注意力分数设置为一个极大的负数（比如 -1e9）。也就是给计算出来的注意力分数矩阵加上了一个特别的矩阵，矩阵的右上方全是负无穷，左下角全是0，也就是让原本注意力分数矩阵的右上角全部变成负无穷（右上角的数值代表的是前面token对于他后面的token的注意力分数）</p>
-<p>这样一来，在经过Softmax函数之后，这些位置的注意力权重就变成了0，也就不会让前面的token看到后面的答案了（后续在加权求和的时候就不会加上来自后面的token生成的V向量）</p>
-<h3 id="cross-attentionencoder-decoder-attention">Cross-Attention(Encoder-Decoder Attention)</h3>
-<p>这个是一个特殊的注意力层，与self attention唯一的不同就是K、V矩阵是来自encoder最后一次输出的向量生成的K和V，而Q则是由经过了掩码注意力层之后生成的向量生成的。在cross-attention模块中，来自答案的Q和来自encoder的K算出了注意力分数矩阵，这个注意力分数矩阵然后会和来自encoder的V矩阵相乘得到新的一组向量再和原向量进行了残差连接并进行了层归一化处理</p>
-<p>这样做的原因就是让输出作为查询，而来自encoder的信息就是作为一份已经理解好的超级“文档”，让来自decoder的序列来注意到来自encoder的信息，从而实现信息的融合</p>
-<blockquote>
-<p>信息融合本身不是目的，它是一种手段。其最终目的，是让模型在预测下一个词时，能够做出一个更明智、更准确、几乎是唯一正确的选择。如果说Cross-Attention是“博览群书”（吸收信息），那么FFN就是“消化理解”（深度思考）。它会将收集到的信息进行提炼、组合和筛选，识别出更复杂的模式，最终输出一个更加精炼、意图更加明确的向量。“正因为融合了信息，这个向量才从一个‘充满可能性的模糊状态’，变成了一个‘指向正确答案的确定状态’。”</p>
-</blockquote>
-<h2 id="最后linear--softmax">最后—Linear &#x26; Softmax</h2>
-<p>经过decoder最后模型会生成一堆向量，但是这个向量还不是最终的预测向量，这个向量还要经过一个线性层生成一个巨大的（维度跟词表中词的数量一样）每个维度包含其对应词的预测分数的向量，然后这个分数向量再经过softmax生成概率向量就完成了</p>
-<h3 id="linear">Linear</h3>
-<p>线性层就是一个简单的全连接神经网络将解码器产生的向量线性变换到了一个巨大的向量</p>
-<h3 id="softmax">Softmax</h3>
-<p>softmax没啥好说的，就是一个计算过程，取一组值然后生成一个概率分布，分数越大概率就越高，所有值对概率的和为1</p>
-<h2 id="something-special">Something Special</h2>
-<h3 id="损失函数">损失函数</h3>
-<p>在训练的时候，我们假设我们的输出词汇表只包含六个单词（“a”、“am”、“i”、“thanks”、“student”和 “<eos>”，然后我们就可以定义词表：
-<img src="/images/posts/wordlist.png" alt="">
-即每个词对应了一个index值，然后我们还有one-shot编码
-<img src="/images/posts/one-shot.png" alt="">
-就是为每个词编码为当前第index维的值为1，其余都是0的一个向量，然后我们不是经过decoder之后就会有一个跟词表维度一样的预测向量吗，如果模型预测的准确，那么这个预测向量就应该是当前词对应的one-shot向量（这个维度的概率为1，其他维度的概率为0嘛）</eos></p>
-<p>这样，我们就可以计算损失了，即预测向量与one-shot向量的<a href="https://colah.github.io/posts/2015-09-Visual-Information/">交叉熵</a>或者是<a href="https://www.countbayesie.com/blog/2017/5/9/kullback-leibler-divergence-explained">KL散度</a>等等</p>
-<h3 id="并行">并行</h3>
-<p>在进行注意力计算的时候，某个token的计算会依赖于其他token，但在实际的计算过程中是进行矩阵乘法，所以仍然是并行计算，不过在前馈层是没有token间的依赖关系的，可以单个token直接进行计算，所以可以并行计算（也是矩阵乘法）</p> </div> <div class="flex items-center gap-5 text-lg" role="group" aria-label="Share on social media"> <span class="text-base font-bold text-blacktext dark:text-white">Share </span> <a href="https://twitter.com/intent/tweet?text=%22Transformer%20From%20Scratch%22%20-%20by%20oGYCo%20%7C%20oGYCo&url=https://ogyco.github.io//blog/posts/TransformerFromScratch/" class="bg-blacktext rounded-full p-2" target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter" title="Share on Twitter"> <svg width="0.98em" height="1em" viewBox="0 0 1200 1227" data-icon="twitter">   <use href="#ai:local:twitter"></use>  </svg> </a><a href="https://www.facebook.com/sharer/sharer.php?u=https://ogyco.github.io//blog/posts/TransformerFromScratch/" class="bg-blacktext rounded-full p-2" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook" title="Share on Facebook"> <svg width="1em" height="1em" viewBox="0 0 36 36" data-icon="facebook">   <use href="#ai:local:facebook"></use>  </svg> </a><a href="https://api.whatsapp.com/send?text=https%3A%2F%2Fogyco.github.io%2F%2Fblog%2Fposts%2FTransformerFromScratch%2F" class="bg-blacktext rounded-full p-2" target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp" title="Share on WhatsApp"> <svg width="0.99em" height="1em" viewBox="0 0 256 259" data-icon="whatsapp">   <use href="#ai:local:whatsapp"></use>  </svg> </a> </div> </article> <div class="max-xl:hidden  "> <div id="nav-content" class="bg-white dark:bg-transparent sticky w-72 mt-8 rounded-2xl dark:border-0 border border-neutral-100 top-14 max-h-[calc(100svh-3.5rem)] overflow-x-hidden px-6 pt-8 pb-12"> <div class="flex flex-col gap-4 pl-0"> <div> <h3 class="dark:text-zinc-400 text-blacktext/90 font-black tracking-wide text-md uppercase">Table of Contents</h3> </div> <div class="flex flex-col gap-2 pr-6 text-neutral-500 dark:text-neutral-300 "> <ul id="toc-list" class="leading-loose text-base gap-2 border-l dark:border-neutral-500/20 border-blacktext/20"> <li class="leading-loose"> <a class="inline-block leading-5 pl-4 font-bold text-white border-l dark:border-white border-blacktext dark:hover:border-white hover:border-blacktext" href="#">Transformer From Scratch</a> </li> </ul> </div> </div> </div> </div> <script type="module">document.addEventListener("DOMContentLoaded",function(){const d=document.getElementById("toc-list"),c=document.getElementById("content");if(!d||!c)return;const s=c.querySelectorAll("h2, h3");let r=d;s.forEach((e,n)=>{e.id||(e.id=e.textContent?.trim().toLowerCase().replace(/\s+/g,"-")+"-"+n);const l=document.createElement("li"),t=document.createElement("a");if(t.href=`#${e.id}`,t.textContent=e.textContent?.trim()||e.id,t.classList.add("inline-block","leading-5","hover:text-mint-400","py-2","border-l","border-transparent","dark:hover:border-white","hover:border-blacktext"),t.classList.add(e.tagName==="H2"?"pl-6":"pl-12"),console.log("classes removed 2"),l.appendChild(t),e.tagName==="H2"){r=document.createElement("ul"),r.classList.add("border-neutral-400","dark:hover:border-white","hover:border-blacktext","pl-0"),console.log("classes removed 3");const o=document.createElement("li");o.appendChild(t),o.appendChild(r),d.appendChild(o)}else r.appendChild(l);t.addEventListener("click",function(o){o.preventDefault(),document.getElementById(e.id)?.scrollIntoView({behavior:"smooth",block:"start"})})});const i=new IntersectionObserver(e=>{e.forEach(n=>{const l=n.target.getAttribute("id"),t=document.querySelector(`a[href="#${l}"]`);n.isIntersecting&&(document.querySelectorAll("#toc-list a").forEach(o=>{o.classList.remove("font-semibold","dark:text-mint-300!","text-blacktext!","dark:border-white!","border-blacktext!"),o.classList.add("dark:text-neutral-300","text-neutral-500"),console.log("classes removed 4")}),t?.classList.add("font-semibold","dark:text-mint-300!","text-blacktext!","border-l","dark:border-white!","border-blacktext!"))})},{rootMargin:"-30% 0px -65% 0px",threshold:.1});s.forEach(e=>i.observe(e))});</script> </section> <div class="flex flex-col gap-6 max-w-4xl max-lg:py-2 py-3 max-xl:py-2 mx-auto"> <div class="px-8"> <nav class="mt-8 flex flex-row gap-2 w-full p-6 max-xl:p-3 max-lg:p-2"> <a href="/blog/posts/markdown-tutorial" style="width: -webkit-fill-available;" class="relative flex min-w-1/2 items-center justify-start gap-2 font-semibold dark:text-white text-blacktext text-left text-pretty max-sm:text-xs max-md:text-sm max-md:leading-4 hover:text-mint-300 hover:[text-shadow:1px_1px_11px_rgba(208,251,229,0.7)] transition-all before:absolute before:-top-5 before:left-0 before:text-sm before:font-light before:content-['Previous_Post']"> <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.85355 3.85355C7.04882 3.65829 7.04882 3.34171 6.85355 3.14645C6.65829 2.95118 6.34171 2.95118 6.14645 3.14645L2.14645 7.14645C1.95118 7.34171 1.95118 7.65829 2.14645 7.85355L6.14645 11.8536C6.34171 12.0488 6.65829 12.0488 6.85355 11.8536C7.04882 11.6583 7.04882 11.3417 6.85355 11.1464L3.20711 7.5L6.85355 3.85355ZM12.8536 3.85355C13.0488 3.65829 13.0488 3.34171 12.8536 3.14645C12.6583 2.95118 12.3417 2.95118 12.1464 3.14645L8.14645 7.14645C7.95118 7.34171 7.95118 7.65829 8.14645 7.85355L12.1464 11.8536C12.3417 12.0488 12.6583 12.0488 12.8536 11.8536C13.0488 11.6583 13.0488 11.3417 12.8536 11.1464L9.20711 7.5L12.8536 3.85355Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg> The Complete Markdown Guide </a>  </nav> <hr class="text-mint-300/50"> </div> <div class="px-8 max-sm:px-4"> <section class="py-8 max-lg:px-4 max-md:px-8 max-sm:px-0 max-md:py-4 max-w-4xl mx-auto">   <div class="flex flex-col gap-8 w-full mx-auto"> <article class="bg-white dark:bg-zinc-900/25 dark:border dark:border-zinc-800 dark:hover:border-mint-300 hover:backdrop-blur-none backdrop-blur-lg shadow-sm overflow-auto hover:shadow-[5px_5px_rgba(0,98,90,0.4),10px_10px_rgba(0,98,90,0.3),15px_15px_rgba(0,98,90,0.2),20px_20px_rgba(0,98,90,0.1),25px_25px_rgba(0,98,90,0.05)] p-8 max-md:p-6 w-full flex justify-between items-center bg-linear-to-r hover:from-teal-200 hover:to-emerald-200 dark:hover:from-riptide-500 dark:hover:to-mint-500 transition-all hover:scale-105  duration-200 ease-in-out gap-8 max-md:gap-4 rounded-3xl max-md:flex-col-reverse"> <div class="flex flex-col"> <a href="/blog/posts/markdown-tutorial" class="flex flex-col gap-4 w-full"> <span class="flex flex-row center text-sm font-semibold items-center gap-3 text-blacktext dark:text-riptide-50 "> <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 1C4.77614 1 5 1.22386 5 1.5V2H10V1.5C10 1.22386 10.2239 1 10.5 1C10.7761 1 11 1.22386 11 1.5V2H12.5C13.3284 2 14 2.67157 14 3.5V12.5C14 13.3284 13.3284 14 12.5 14H2.5C1.67157 14 1 13.3284 1 12.5V3.5C1 2.67157 1.67157 2 2.5 2H4V1.5C4 1.22386 4.22386 1 4.5 1ZM10 3V3.5C10 3.77614 10.2239 4 10.5 4C10.7761 4 11 3.77614 11 3.5V3H12.5C12.7761 3 13 3.22386 13 3.5V5H2V3.5C2 3.22386 2.22386 3 2.5 3H4V3.5C4 3.77614 4.22386 4 4.5 4C4.77614 4 5 3.77614 5 3.5V3H10ZM2 6V12.5C2 12.7761 2.22386 13 2.5 13H12.5C12.7761 13 13 12.7761 13 12.5V6H2ZM7 7.5C7 7.22386 7.22386 7 7.5 7C7.77614 7 8 7.22386 8 7.5C8 7.77614 7.77614 8 7.5 8C7.22386 8 7 7.77614 7 7.5ZM9.5 7C9.22386 7 9 7.22386 9 7.5C9 7.77614 9.22386 8 9.5 8C9.77614 8 10 7.77614 10 7.5C10 7.22386 9.77614 7 9.5 7ZM11 7.5C11 7.22386 11.2239 7 11.5 7C11.7761 7 12 7.22386 12 7.5C12 7.77614 11.7761 8 11.5 8C11.2239 8 11 7.77614 11 7.5ZM11.5 9C11.2239 9 11 9.22386 11 9.5C11 9.77614 11.2239 10 11.5 10C11.7761 10 12 9.77614 12 9.5C12 9.22386 11.7761 9 11.5 9ZM9 9.5C9 9.22386 9.22386 9 9.5 9C9.77614 9 10 9.22386 10 9.5C10 9.77614 9.77614 10 9.5 10C9.22386 10 9 9.77614 9 9.5ZM7.5 9C7.22386 9 7 9.22386 7 9.5C7 9.77614 7.22386 10 7.5 10C7.77614 10 8 9.77614 8 9.5C8 9.22386 7.77614 9 7.5 9ZM5 9.5C5 9.22386 5.22386 9 5.5 9C5.77614 9 6 9.22386 6 9.5C6 9.77614 5.77614 10 5.5 10C5.22386 10 5 9.77614 5 9.5ZM3.5 9C3.22386 9 3 9.22386 3 9.5C3 9.77614 3.22386 10 3.5 10C3.77614 10 4 9.77614 4 9.5C4 9.22386 3.77614 9 3.5 9ZM3 11.5C3 11.2239 3.22386 11 3.5 11C3.77614 11 4 11.2239 4 11.5C4 11.7761 3.77614 12 3.5 12C3.22386 12 3 11.7761 3 11.5ZM5.5 11C5.22386 11 5 11.2239 5 11.5C5 11.7761 5.22386 12 5.5 12C5.77614 12 6 11.7761 6 11.5C6 11.2239 5.77614 11 5.5 11ZM7 11.5C7 11.2239 7.22386 11 7.5 11C7.77614 11 8 11.2239 8 11.5C8 11.7761 7.77614 12 7.5 12C7.22386 12 7 11.7761 7 11.5ZM9.5 11C9.22386 11 9 11.2239 9 11.5C9 11.7761 9.22386 12 9.5 12C9.77614 12 10 11.7761 10 11.5C10 11.2239 9.77614 11 9.5 11Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg> April 5, 2025</span> <h2 class="dark:text-mint-50 text-blacktext text-3xl font-bold text-pretty">The Complete Markdown Guide</h2> <div class="flex justify-start items-center gap-2 text-blacktext dark:text-mint-50 "> <span class="font-medium tracking-wider">Read more </span> <svg width="1em" height="1em" class="size-4 rotate-180" data-icon="arrow-left">   <symbol id="ai:local:arrow-left" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M6.854 3.146a.5.5 0 0 1 0 .708L3.707 7H12.5a.5.5 0 0 1 0 1H3.707l3.147 3.146a.5.5 0 0 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 0 1 .708 0" clip-rule="evenodd"/></symbol><use href="#ai:local:arrow-left"></use>  </svg> </div> </a> <div class="gap-3 mt-3 flex flex-col"> <div class="flex gap-2 flex-wrap"> <a class="cursor-pointer" href="/blog/techs/markdown" aria-label="View articles about Markdown" role="link"><span class="flex items-center w-fit pl-2 pr-2 py-0.5 gap-1 text-sm font-semibold leading-3 bg-white shadow rounded-full transition-all duration-300 ease-in-out hover:bg-zinc-800 hover:text-white max-sm:pl-1 max-sm:pr-1.5 max-sm:text-xs max-sm:gap-0.5 text-base" role="presentation" aria-hidden="true"><div class="flex items-center justify-center aspect-square bg-black rounded-full p-1 size-7 max-lg:size-6 max-sm:size-5 " role="img" aria-label="Markdown icon"><svg width="1.63em" height="1em" class="w-full!" data-icon="markdown">   <symbol id="ai:local:markdown" viewBox="0 0 208 128"><path fill="none" stroke="#FFF" stroke-width="10" d="M15 5h178a10 10 0 0 1 10 10v98a10 10 0 0 1-10 10H15a10 10 0 0 1-10-10V15A10 10 0 0 1 15 5z"/><path fill="#FFF" d="M30 98V30h20l20 25 20-25h20v68H90V59L70 84 50 59v39zm125 0-30-33h20V30h20v35h20z"/></symbol><use href="#ai:local:markdown"></use>  </svg></div>Markdown</span></a> </div> <div class="gap-2 flex flex-wrap justify-start items-center"> <a href="/blog/tags/language" class="max-md:text-xs text-sm font-medium text-zinc-500 dark:text-neutral-400 hover:text-blacktext transition-all ease-in-out duration-300 px-4 py-1 max-md:px-3 rounded-full bg-mint-950/5 dark:bg-zinc-800 hover:bg-mint-200"> language </a> </div> </div> </div> <a href="/blog/posts/markdown-tutorial" style="background-image:url(/images/posts/markdown.webp)" class="shrink-0 rounded-2xl bg-center bg-cover aspect-video max-md:aspect-video w-2/6 max-md:w-full"></a> </article> </div> <div id="morePosts" class="w-full flex justify-center text-center my-12"> <a href="/blog/posts/" class="font-bold cursor-pointer text-mint-400 dark:text-mint-100 hover:text-mint-500 dark:hover:text-mint-300 transition-all">
+<details>
+<summary>工程代码解读</summary>
+```python
+class EncoderDecoder(nn.Module):
+    """
+    A standard Encoder-Decoder architecture. Base for this and many
+    other models.
+    """
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>def __init__(self, encoder, decoder, src_embed, tgt_embed, generator):</span></span>
+<span class="line"><span>    super(EncoderDecoder, self).__init__()</span></span>
+<span class="line"><span>    self.encoder = encoder</span></span>
+<span class="line"><span>    self.decoder = decoder</span></span>
+<span class="line"><span>    self.src_embed = src_embed</span></span>
+<span class="line"><span>    self.tgt_embed = tgt_embed</span></span>
+<span class="line"><span>    self.generator = generator</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def forward(self, src, tgt, src_mask, tgt_mask):</span></span>
+<span class="line"><span>    "Take in and process masked src and target sequences."</span></span>
+<span class="line"><span>    return self.decode(self.encode(src, src_mask), src_mask, tgt, tgt_mask)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def encode(self, src, src_mask):</span></span>
+<span class="line"><span>    return self.encoder(self.src_embed(src), src_mask)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def decode(self, memory, src_mask, tgt, tgt_mask):</span></span>
+<span class="line"><span>    return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span></span></span>
+<span class="line"><span>&#x3C;/details></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## 第一步—Tokenization &#x26; Embedding &#x26; Positional Encoding</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 分词</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 嵌入向量</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 位置编码</span></span>
+<span class="line"><span>如果只是有注意力和全连接层，一段序列的位置关系就会被忽略，所以需要引入位置编码</span></span>
+<span class="line"><span>所谓的位置编码就是给embedding之后的向量加上了一个相同维度的代表这token位置信息的向量（遵循一定的模式），注意是两个向量相加，不是直接拼接在原本的向量后面，虽然应该也可以，但是那样会增加向量的维度导致后面需要的参数量也更多。</span></span>
+<span class="line"><span>#### 遵循什么模式呢？</span></span>
+<span class="line"><span>位置编码会有不同的方式，通过不同的函数生成</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## 第二步—Encoder</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>过程：整个架构就是完成一个input序列到一个putput序列的任务，而encoder负责的就是input的部分。编码器会接受一个向量列表作为输入（最开始是嵌入向量和位置向量的和），然后经过注意力层和前馈层之后传递到下一个encoder，经过多个encoder最后得到了一个向量列表会用于decoder的cross-attention层</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 注意力机制</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>自注意力机制就是让每个单独的token学到语境信息并更新，即让每个token向量变成一个在语境信息中更加准确的向量，从而将每个token转化为该token在语境中的高维精确的表达。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>例如：”`The animal didn't cross the street because it was too tired`”</span></span>
+<span class="line"><span>比如该句子中的it指代的是the animal，但是一个简单的it的嵌入向量只能表达最基本的代词含义，现在需要让这个it“注意到”animal，从而将这两个词联系起来，即是计算注意力分数然后根据animal的注意力分数较高，会让之后由animal得到的V向量的权重较大，使得animal对it的更新效果更加显著。当然，一个token对自身的注意力权重通常都比较显著，以确保其核心身份信息不会丢失。但最高的注意力权重会动态地分配给当前上下文中最重要的token(s)，这其中可能包括它自己，也可能包括其他的token。例如对于 `it` 来说，`animal` 的上下文信息可能比 `it` 本身的（作为代词的）信息更重要。在这种情况下，模型可能会学到给 `animal` 分配比 `it` 自身更高的注意力权重。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>- 自注意力机制通过一个**加权求和**过程，让每个token的向量表示融合来自句子中其他token（尤其是最相关的token）的上下文信息。在这个过程中，通过自身的注意力权重和至关重要的**残差连接（为什么要引入[残差连接](#残差连接)）**，它又能确保token不会“忘记”自己是谁，从而实现对原始信息的保留和对上下文信息的精确更新。</span></span>
+<span class="line"><span>- **自注意力机制的核心任务，就是计算出那个需要被加到原始向量上的“更新向量”或“残差向量”，然后与原始向量相加就得到了最后更新的向量**</span></span>
+<span class="line"><span>- 具体过程</span></span>
+<span class="line"><span>    - 第一步：将原始向量与三个矩阵Wq、Wk、Wv分别相乘得到Q向量、K向量、V向量，即一层注意力的参数就是Wq、Wk、Wv三个矩阵</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>        ![Transformer QKV矩阵计算](/images/posts/t-1.png)</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>    - 第二步：然后得到了三个矩阵Q、K、V，再让Q矩阵和K矩阵相乘得到每个向量与其他每个向量的注意力分数，K矩阵需要转置，就得到了向量的点积矩阵（注意力分数矩阵），注意这里注意力分数还要进行除以根号下dk（向量的维度）（防止产生过大的注意力分数和梯度消失问题，让模型无法学习多样化的信息，即最后的softmax结果几乎是一个one-shot向量）和一个softmax操作（让权重和为1，且都是非负数，这样的权重可以被理解为一个**概率分布**，它告诉我们应该将100%的“注意力”如何分配给序列中的所有token）</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>        ![注意力分数计算公式](/images/posts/t-2.png)</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>        ![注意力机制详细流程](/images/posts/t-3.png)</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>        ![Softmax函数应用](/images/posts/t-4.png)</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>        - 梯度消失的原因，当产生的数值特别大的时候，变化几乎不会导致结果的变化，也就是梯度为0，模型就会认为不需要再继续训练了</span></span>
+<span class="line"><span>            </span></span>
+<span class="line"><span>            ![梯度消失问题示意图](/images/posts/t-5.png)</span></span>
+<span class="line"><span>            </span></span>
+<span class="line"><span>    - 第三步：然后再根据注意力分数对V向量进行加权求和</span></span>
+<span class="line"><span>  </span></span>
+<span class="line"><span>      ![注意力加权求和计算](/images/posts/t-6.png)</span></span>
+<span class="line"><span>- 论文中所用的实际上是[多头注意力](#多头注意力机制)来计算，也就是算出来的q、k、v向量跟原本的向量不是同一个维度，例如原向量是512维的，现在算出来的q、k、v都是64维度的</span></span>
+<span class="line"><span>- 在实际的计算过程中用到的是矩阵计算，如图所示：</span></span>
+<span class="line"><span>  - 算Q、K、V矩阵：例如2个512维的向量，就是一个2 * 512的矩阵，然后乘以一个512 * 64的矩阵得到了两个64维的矩阵</span></span>
+<span class="line"><span>     ![](/images/posts/self-attention-matrix-calculation.png)</span></span>
+<span class="line"><span>  - 算注意力矩阵:Q为2 * 64的矩阵，乘以K的转置，也就是64 * 2的矩阵，也就得到一个2 * 2的注意力分数矩阵，这样算出来就是例如[1][1]的数值就是第一个向量对第一个向量的注意力,[1][2]就是第一个向量对第二个向量的注意力。然后除以根号下dk(key向量的维度)，然后再做softmax，显然这里的softmax的计算就是对注意力矩阵的每个行向量进行操作，即每个行向量是作为一组来操作的</span></span>
+<span class="line"><span>    ![](/images/posts/self-attention-matrix-calculation-2.png)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 多头注意力机制</span></span>
+<span class="line"><span>#### 过程</span></span>
+<span class="line"><span>所谓的多头注意力就是原本是将原向量乘以三个矩阵：Wq、Wk、Wv转（线性变换）成维度相同的向量然后就可以一次性完成一次的注意力层，然后多头注意力就是变成了将原向量线性变换为了低维度的3个向量，例如原向量是512维的，现在得到的q、k、v都是64维度的，然后就会有8组Wq、Wk、Wv矩阵完整8次转化，每一组最终都会得到一个包含64维度向量组成的矩阵n * 64，然后把8组的矩阵拼接起来就是一个包含512维度向量的矩阵n * 512，注意这样直接拼接起来并不好，因为信息相当于是割裂的，就需要再乘以一个512 * 512的矩阵相当于把8个64维度的**信息片段**的信息进行整合，重新变成一个**完整**的向量。</span></span>
+<span class="line"><span>![](/images/posts/transformer_attention_heads_qkv.png)</span></span>
+<span class="line"><span>#### 为什么这样做</span></span>
+<span class="line"><span>为什么不直接将Q、K、V变换为512维度的呢？这样不是更加方便吗，分成8次的注意力计算有什么好处？最后还要再乘以一个矩阵来整合信息,还增加了参数量和计算量</span></span>
+<span class="line"><span>- "It expands the model’s ability to focus on different positions."</span></span>
+<span class="line"><span>  - 每个头关注的是不同的信息，然后这样就能学到更加丰富的内容，注意力是加权平均的操作：每个位置是看“所有其他位置”的加权和，所以这种“平均”会有可能模糊具体细节，尤其是当多个位置有相似内容时。多头注意力用多个“注意力头”同时从不同角度学习注意力权重，可以一定程度上保留更多细粒度信息。Transformer 能快速捕捉远程依赖，但注意力有平均化的副作用，作者通过多头注意力来缓解这个问题。</span></span>
+<span class="line"><span>- "It gives the attention layer multiple 'representation subspaces'"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>这么看的话，transformer就跟CNN很相似了，每个注意力头关注的是不同的地方，然后通过乘以一个大的变换矩阵就形成更大的特征提取与融合</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 前馈神经网络</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 残差连接</span></span>
+<span class="line"><span>残差连接就是让经过了注意力层或者FFN生成的向量和原本的没有经过网络的向量直接相加之后再进行层归一化处理</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>理论上来说，更深的网络一定不会比浅的网络的性能差，因为深的网络只需要让后面的层变成恒等变换层就会与浅层网络一样，但是实践上发现要让网络拟合出一个恒等变换是很困难的，而网络拟合一个0函数就很简单，即让F(x)=0，因为只需要让权重全部变成0就可以了。于是就引入了残差连接，即让网络学习的是输入与输出之间的差函数，这样，一个恒等变换网络就等于一个残差为0的网络加上残差连接即可。而注意力层就是学习的残差函数</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>>残差连接改变了自注意力层的**学习目标**</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>- **没有残差连接时**：自注意力层需要学习一个完整的变换函数 `H(x)`，直接输出最终的目标向量。这很难。</span></span>
+<span class="line"><span>- **有残差连接时**：自注意力层只需要学习**残差（Residual）** `F(x) = H(x) - x`。也就是说，它只需要学习“**需要做的改变量**”或者说“**更新量**”。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>如果模型发现不需要做任何改变，它只需要让自注意力层输出一个零向量就行了，这比学习一个恒等变换（输入什么输出什么）要容易得多。</span></span>
+<span class="line"><span>![残差网络的意义](/images/posts/t-7.png)</span></span>
+<span class="line"><span>### 层归一化</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## 第三步—Decoder</span></span>
+<span class="line"><span>Decoder负责的是Output序列，整个过程就是不断的将decoder的输出作为新的输入给decoder然后让decoder不断生成下一个token直到生成一个特殊的结束token</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>>重要：所谓的生成下一个token就是每一个token经过decoder之后就会生成一个代表概率的向量，向量的某个位置的值代表着当前token对于下一个token在这个index下（例如向量的第5维度代表着词表中的某个特定的词）对应的词的概率，也就是说**每个token经过decoder之后都会生成一个预测向量**，只不过在推理阶段我们只需要取最后一个token的预测向量来生成下一个词而已，而在推理的时候则是会用到所有token生成的预测向量，看看这个预测向量代表的词和实际的标签是否相符合罢了</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>在推理的时候，Decoder处理的第一个Token向量来自于一个人为添加的、代表“句子开始”的特殊标记，通常被称为 &#x3C;sos> (Start of Sequence) 或 &#x3C;bos> (Begin of Sequence)，然后模型就可以不断的进行生成了</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>在训练时，Transformer用了一个“障眼法”（Mask），让GPU可以同时为序列中的每一个位置都执行一次“一次只预测一个词”的任务，从而把原本需要N步的串行计算，变成了一步完成的并行计算，极大地加速了训练过程。这个设计正是Transformer能够处理长序列并在大规模数据上成功训练的关键之一</span></span>
+<span class="line"><span>### 掩码注意力</span></span>
+<span class="line"><span>掩码的目的主要是用在模型训练的时候。</span></span>
+<span class="line"><span>在训练时，我们已经拥有了完整的源句子和对应的目标句子，输入的准备如图</span></span>
+<span class="line"><span>![](/images/posts/train-encoder.png)</span></span>
+<span class="line"><span>也就是说，在训练的时候，输入了sos，然后让模型根据sos和原始的输入来预测下一个词也就是Wie，即前向传播一次，然后再反向传播进行梯度下降来修改参数让模型预测的更准确，然后输入sos、Wie让模型预测geht，以此类推，这样sos和eos的加入刚好让标签和实际输入错开了，从而保证了自回归生成。但是！！！注意了，实际训练过程，加上了sos的序列会被全部放进encoder中</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>为什么？不是一次只能预测一个词吗（对也不对）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>实际上decoder是能够一次性预测所有的词的，只不过是推理的时候只用到了最后一个token的预测，而在训练的时候是会用到所有的token的预测的，也就是根据预测来反向传播调整参数</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>那么这个时候就需要引入掩码了，因为预测的时候不能让当前token看到他后面的token（也就是实际的“答案”）</span></span>
+<span class="line"><span>#### 掩码操作</span></span>
+<span class="line"><span>例如，当计算第三个位置（"geht"）的输出时，自注意力机制会计算它与序列中所有其他词的“注意力分数”。Mask矩阵会强行将它与自己及之后位置（"geht", "es"）的注意力分数设置为一个极大的负数（比如 -1e9）。也就是给计算出来的注意力分数矩阵加上了一个特别的矩阵，矩阵的右上方全是负无穷，左下角全是0，也就是让原本注意力分数矩阵的右上角全部变成负无穷（右上角的数值代表的是前面token对于他后面的token的注意力分数）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>这样一来，在经过Softmax函数之后，这些位置的注意力权重就变成了0，也就不会让前面的token看到后面的答案了（后续在加权求和的时候就不会加上来自后面的token生成的V向量）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### Cross-Attention(Encoder-Decoder Attention)</span></span>
+<span class="line"><span>这个是一个特殊的注意力层，与self attention唯一的不同就是K、V矩阵是来自encoder最后一次输出的向量生成的K和V，而Q则是由经过了掩码注意力层之后生成的向量生成的。在cross-attention模块中，来自答案的Q和来自encoder的K算出了注意力分数矩阵，这个注意力分数矩阵然后会和来自encoder的V矩阵相乘得到新的一组向量再和原向量进行了残差连接并进行了层归一化处理</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>这样做的原因就是让输出作为查询，而来自encoder的信息就是作为一份已经理解好的超级“文档”，让来自decoder的序列来注意到来自encoder的信息，从而实现信息的融合</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>>信息融合本身不是目的，它是一种手段。其最终目的，是让模型在预测下一个词时，能够做出一个更明智、更准确、几乎是唯一正确的选择。如果说Cross-Attention是“博览群书”（吸收信息），那么FFN就是“消化理解”（深度思考）。它会将收集到的信息进行提炼、组合和筛选，识别出更复杂的模式，最终输出一个更加精炼、意图更加明确的向量。“正因为融合了信息，这个向量才从一个‘充满可能性的模糊状态’，变成了一个‘指向正确答案的确定状态’。”</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## 最后—Linear &#x26; Softmax</span></span>
+<span class="line"><span>经过decoder最后模型会生成一堆向量，但是这个向量还不是最终的预测向量，这个向量还要经过一个线性层生成一个巨大的（维度跟词表中词的数量一样）每个维度包含其对应词的预测分数的向量，然后这个分数向量再经过softmax生成概率向量就完成了</span></span>
+<span class="line"><span>### Linear</span></span>
+<span class="line"><span>线性层就是一个简单的全连接神经网络将解码器产生的向量线性变换到了一个巨大的向量</span></span>
+<span class="line"><span>### Softmax</span></span>
+<span class="line"><span>softmax没啥好说的，就是一个计算过程，取一组值然后生成一个概率分布，分数越大概率就越高，所有值对概率的和为1</span></span>
+<span class="line"><span>## Something Special</span></span>
+<span class="line"><span>### 损失函数</span></span>
+<span class="line"><span>在训练的时候，我们假设我们的输出词汇表只包含六个单词（“a”、“am”、“i”、“thanks”、“student”和 “&#x3C;eos>”，然后我们就可以定义词表：</span></span>
+<span class="line"><span>![](/images/posts/wordlist.png)</span></span>
+<span class="line"><span>即每个词对应了一个index值，然后我们还有one-shot编码</span></span>
+<span class="line"><span>![](/images/posts/one-shot.png)</span></span>
+<span class="line"><span>就是为每个词编码为当前第index维的值为1，其余都是0的一个向量，然后我们不是经过decoder之后就会有一个跟词表维度一样的预测向量吗，如果模型预测的准确，那么这个预测向量就应该是当前词对应的one-shot向量（这个维度的概率为1，其他维度的概率为0嘛）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>这样，我们就可以计算损失了，即预测向量与one-shot向量的[交叉熵](https://colah.github.io/posts/2015-09-Visual-Information/)或者是[KL散度](https://www.countbayesie.com/blog/2017/5/9/kullback-leibler-divergence-explained)等等</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### 并行</span></span>
+<span class="line"><span>在进行注意力计算的时候，某个token的计算会依赖于其他token，但在实际的计算过程中是进行矩阵乘法，所以仍然是并行计算，不过在前馈层是没有token间的依赖关系的，可以单个token直接进行计算，所以可以并行计算（也是矩阵乘法）</span></span></code></pre></details> </div> <div class="flex items-center gap-5 text-lg" role="group" aria-label="Share on social media"> <span class="text-base font-bold text-blacktext dark:text-white">Share </span> <a href="https://twitter.com/intent/tweet?text=%22Transformer%20From%20Scratch%22%20-%20by%20oGYCo%20%7C%20oGYCo&url=https://ogyco.github.io//blog/posts/TransformerFromScratch/" class="bg-blacktext rounded-full p-2" target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter" title="Share on Twitter"> <svg width="0.98em" height="1em" viewBox="0 0 1200 1227" data-icon="twitter">   <use href="#ai:local:twitter"></use>  </svg> </a><a href="https://www.facebook.com/sharer/sharer.php?u=https://ogyco.github.io//blog/posts/TransformerFromScratch/" class="bg-blacktext rounded-full p-2" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook" title="Share on Facebook"> <svg width="1em" height="1em" viewBox="0 0 36 36" data-icon="facebook">   <use href="#ai:local:facebook"></use>  </svg> </a><a href="https://api.whatsapp.com/send?text=https%3A%2F%2Fogyco.github.io%2F%2Fblog%2Fposts%2FTransformerFromScratch%2F" class="bg-blacktext rounded-full p-2" target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp" title="Share on WhatsApp"> <svg width="0.99em" height="1em" viewBox="0 0 256 259" data-icon="whatsapp">   <use href="#ai:local:whatsapp"></use>  </svg> </a> </div> </article> <div class="max-xl:hidden  "> <div id="nav-content" class="bg-white dark:bg-transparent sticky w-72 mt-8 rounded-2xl dark:border-0 border border-neutral-100 top-14 max-h-[calc(100svh-3.5rem)] overflow-x-hidden px-6 pt-8 pb-12"> <div class="flex flex-col gap-4 pl-0"> <div> <h3 class="dark:text-zinc-400 text-blacktext/90 font-black tracking-wide text-md uppercase">Table of Contents</h3> </div> <div class="flex flex-col gap-2 pr-6 text-neutral-500 dark:text-neutral-300 "> <ul id="toc-list" class="leading-loose text-base gap-2 border-l dark:border-neutral-500/20 border-blacktext/20"> <li class="leading-loose"> <a class="inline-block leading-5 pl-4 font-bold text-white border-l dark:border-white border-blacktext dark:hover:border-white hover:border-blacktext" href="#">Transformer From Scratch</a> </li> </ul> </div> </div> </div> </div> <script type="module">document.addEventListener("DOMContentLoaded",function(){const d=document.getElementById("toc-list"),c=document.getElementById("content");if(!d||!c)return;const s=c.querySelectorAll("h2, h3");let r=d;s.forEach((e,n)=>{e.id||(e.id=e.textContent?.trim().toLowerCase().replace(/\s+/g,"-")+"-"+n);const l=document.createElement("li"),t=document.createElement("a");if(t.href=`#${e.id}`,t.textContent=e.textContent?.trim()||e.id,t.classList.add("inline-block","leading-5","hover:text-mint-400","py-2","border-l","border-transparent","dark:hover:border-white","hover:border-blacktext"),t.classList.add(e.tagName==="H2"?"pl-6":"pl-12"),console.log("classes removed 2"),l.appendChild(t),e.tagName==="H2"){r=document.createElement("ul"),r.classList.add("border-neutral-400","dark:hover:border-white","hover:border-blacktext","pl-0"),console.log("classes removed 3");const o=document.createElement("li");o.appendChild(t),o.appendChild(r),d.appendChild(o)}else r.appendChild(l);t.addEventListener("click",function(o){o.preventDefault(),document.getElementById(e.id)?.scrollIntoView({behavior:"smooth",block:"start"})})});const i=new IntersectionObserver(e=>{e.forEach(n=>{const l=n.target.getAttribute("id"),t=document.querySelector(`a[href="#${l}"]`);n.isIntersecting&&(document.querySelectorAll("#toc-list a").forEach(o=>{o.classList.remove("font-semibold","dark:text-mint-300!","text-blacktext!","dark:border-white!","border-blacktext!"),o.classList.add("dark:text-neutral-300","text-neutral-500"),console.log("classes removed 4")}),t?.classList.add("font-semibold","dark:text-mint-300!","text-blacktext!","border-l","dark:border-white!","border-blacktext!"))})},{rootMargin:"-30% 0px -65% 0px",threshold:.1});s.forEach(e=>i.observe(e))});</script> </section> <div class="flex flex-col gap-6 max-w-4xl max-lg:py-2 py-3 max-xl:py-2 mx-auto"> <div class="px-8"> <nav class="mt-8 flex flex-row gap-2 w-full p-6 max-xl:p-3 max-lg:p-2"> <a href="/blog/posts/markdown-tutorial" style="width: -webkit-fill-available;" class="relative flex min-w-1/2 items-center justify-start gap-2 font-semibold dark:text-white text-blacktext text-left text-pretty max-sm:text-xs max-md:text-sm max-md:leading-4 hover:text-mint-300 hover:[text-shadow:1px_1px_11px_rgba(208,251,229,0.7)] transition-all before:absolute before:-top-5 before:left-0 before:text-sm before:font-light before:content-['Previous_Post']"> <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.85355 3.85355C7.04882 3.65829 7.04882 3.34171 6.85355 3.14645C6.65829 2.95118 6.34171 2.95118 6.14645 3.14645L2.14645 7.14645C1.95118 7.34171 1.95118 7.65829 2.14645 7.85355L6.14645 11.8536C6.34171 12.0488 6.65829 12.0488 6.85355 11.8536C7.04882 11.6583 7.04882 11.3417 6.85355 11.1464L3.20711 7.5L6.85355 3.85355ZM12.8536 3.85355C13.0488 3.65829 13.0488 3.34171 12.8536 3.14645C12.6583 2.95118 12.3417 2.95118 12.1464 3.14645L8.14645 7.14645C7.95118 7.34171 7.95118 7.65829 8.14645 7.85355L12.1464 11.8536C12.3417 12.0488 12.6583 12.0488 12.8536 11.8536C13.0488 11.6583 13.0488 11.3417 12.8536 11.1464L9.20711 7.5L12.8536 3.85355Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg> The Complete Markdown Guide </a>  </nav> <hr class="text-mint-300/50"> </div> <div class="px-8 max-sm:px-4"> <section class="py-8 max-lg:px-4 max-md:px-8 max-sm:px-0 max-md:py-4 max-w-4xl mx-auto">   <div class="flex flex-col gap-8 w-full mx-auto"> <article class="bg-white dark:bg-zinc-900/25 dark:border dark:border-zinc-800 dark:hover:border-mint-300 hover:backdrop-blur-none backdrop-blur-lg shadow-sm overflow-auto hover:shadow-[5px_5px_rgba(0,98,90,0.4),10px_10px_rgba(0,98,90,0.3),15px_15px_rgba(0,98,90,0.2),20px_20px_rgba(0,98,90,0.1),25px_25px_rgba(0,98,90,0.05)] p-8 max-md:p-6 w-full flex justify-between items-center bg-linear-to-r hover:from-teal-200 hover:to-emerald-200 dark:hover:from-riptide-500 dark:hover:to-mint-500 transition-all hover:scale-105  duration-200 ease-in-out gap-8 max-md:gap-4 rounded-3xl max-md:flex-col-reverse"> <div class="flex flex-col"> <a href="/blog/posts/markdown-tutorial" class="flex flex-col gap-4 w-full"> <span class="flex flex-row center text-sm font-semibold items-center gap-3 text-blacktext dark:text-riptide-50 "> <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 1C4.77614 1 5 1.22386 5 1.5V2H10V1.5C10 1.22386 10.2239 1 10.5 1C10.7761 1 11 1.22386 11 1.5V2H12.5C13.3284 2 14 2.67157 14 3.5V12.5C14 13.3284 13.3284 14 12.5 14H2.5C1.67157 14 1 13.3284 1 12.5V3.5C1 2.67157 1.67157 2 2.5 2H4V1.5C4 1.22386 4.22386 1 4.5 1ZM10 3V3.5C10 3.77614 10.2239 4 10.5 4C10.7761 4 11 3.77614 11 3.5V3H12.5C12.7761 3 13 3.22386 13 3.5V5H2V3.5C2 3.22386 2.22386 3 2.5 3H4V3.5C4 3.77614 4.22386 4 4.5 4C4.77614 4 5 3.77614 5 3.5V3H10ZM2 6V12.5C2 12.7761 2.22386 13 2.5 13H12.5C12.7761 13 13 12.7761 13 12.5V6H2ZM7 7.5C7 7.22386 7.22386 7 7.5 7C7.77614 7 8 7.22386 8 7.5C8 7.77614 7.77614 8 7.5 8C7.22386 8 7 7.77614 7 7.5ZM9.5 7C9.22386 7 9 7.22386 9 7.5C9 7.77614 9.22386 8 9.5 8C9.77614 8 10 7.77614 10 7.5C10 7.22386 9.77614 7 9.5 7ZM11 7.5C11 7.22386 11.2239 7 11.5 7C11.7761 7 12 7.22386 12 7.5C12 7.77614 11.7761 8 11.5 8C11.2239 8 11 7.77614 11 7.5ZM11.5 9C11.2239 9 11 9.22386 11 9.5C11 9.77614 11.2239 10 11.5 10C11.7761 10 12 9.77614 12 9.5C12 9.22386 11.7761 9 11.5 9ZM9 9.5C9 9.22386 9.22386 9 9.5 9C9.77614 9 10 9.22386 10 9.5C10 9.77614 9.77614 10 9.5 10C9.22386 10 9 9.77614 9 9.5ZM7.5 9C7.22386 9 7 9.22386 7 9.5C7 9.77614 7.22386 10 7.5 10C7.77614 10 8 9.77614 8 9.5C8 9.22386 7.77614 9 7.5 9ZM5 9.5C5 9.22386 5.22386 9 5.5 9C5.77614 9 6 9.22386 6 9.5C6 9.77614 5.77614 10 5.5 10C5.22386 10 5 9.77614 5 9.5ZM3.5 9C3.22386 9 3 9.22386 3 9.5C3 9.77614 3.22386 10 3.5 10C3.77614 10 4 9.77614 4 9.5C4 9.22386 3.77614 9 3.5 9ZM3 11.5C3 11.2239 3.22386 11 3.5 11C3.77614 11 4 11.2239 4 11.5C4 11.7761 3.77614 12 3.5 12C3.22386 12 3 11.7761 3 11.5ZM5.5 11C5.22386 11 5 11.2239 5 11.5C5 11.7761 5.22386 12 5.5 12C5.77614 12 6 11.7761 6 11.5C6 11.2239 5.77614 11 5.5 11ZM7 11.5C7 11.2239 7.22386 11 7.5 11C7.77614 11 8 11.2239 8 11.5C8 11.7761 7.77614 12 7.5 12C7.22386 12 7 11.7761 7 11.5ZM9.5 11C9.22386 11 9 11.2239 9 11.5C9 11.7761 9.22386 12 9.5 12C9.77614 12 10 11.7761 10 11.5C10 11.2239 9.77614 11 9.5 11Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg> April 5, 2025</span> <h2 class="dark:text-mint-50 text-blacktext text-3xl font-bold text-pretty">The Complete Markdown Guide</h2> <div class="flex justify-start items-center gap-2 text-blacktext dark:text-mint-50 "> <span class="font-medium tracking-wider">Read more </span> <svg width="1em" height="1em" class="size-4 rotate-180" data-icon="arrow-left">   <symbol id="ai:local:arrow-left" viewBox="0 0 15 15"><path fill="currentColor" fill-rule="evenodd" d="M6.854 3.146a.5.5 0 0 1 0 .708L3.707 7H12.5a.5.5 0 0 1 0 1H3.707l3.147 3.146a.5.5 0 0 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 0 1 .708 0" clip-rule="evenodd"/></symbol><use href="#ai:local:arrow-left"></use>  </svg> </div> </a> <div class="gap-3 mt-3 flex flex-col"> <div class="flex gap-2 flex-wrap"> <a class="cursor-pointer" href="/blog/techs/markdown" aria-label="View articles about Markdown" role="link"><span class="flex items-center w-fit pl-2 pr-2 py-0.5 gap-1 text-sm font-semibold leading-3 bg-white shadow rounded-full transition-all duration-300 ease-in-out hover:bg-zinc-800 hover:text-white max-sm:pl-1 max-sm:pr-1.5 max-sm:text-xs max-sm:gap-0.5 text-base" role="presentation" aria-hidden="true"><div class="flex items-center justify-center aspect-square bg-black rounded-full p-1 size-7 max-lg:size-6 max-sm:size-5 " role="img" aria-label="Markdown icon"><svg width="1.63em" height="1em" class="w-full!" data-icon="markdown">   <symbol id="ai:local:markdown" viewBox="0 0 208 128"><path fill="none" stroke="#FFF" stroke-width="10" d="M15 5h178a10 10 0 0 1 10 10v98a10 10 0 0 1-10 10H15a10 10 0 0 1-10-10V15A10 10 0 0 1 15 5z"/><path fill="#FFF" d="M30 98V30h20l20 25 20-25h20v68H90V59L70 84 50 59v39zm125 0-30-33h20V30h20v35h20z"/></symbol><use href="#ai:local:markdown"></use>  </svg></div>Markdown</span></a> </div> <div class="gap-2 flex flex-wrap justify-start items-center"> <a href="/blog/tags/language" class="max-md:text-xs text-sm font-medium text-zinc-500 dark:text-neutral-400 hover:text-blacktext transition-all ease-in-out duration-300 px-4 py-1 max-md:px-3 rounded-full bg-mint-950/5 dark:bg-zinc-800 hover:bg-mint-200"> language </a> </div> </div> </div> <a href="/blog/posts/markdown-tutorial" style="background-image:url(/images/posts/markdown.webp)" class="shrink-0 rounded-2xl bg-center bg-cover aspect-video max-md:aspect-video w-2/6 max-md:w-full"></a> </article> </div> <div id="morePosts" class="w-full flex justify-center text-center my-12"> <a href="/blog/posts/" class="font-bold cursor-pointer text-mint-400 dark:text-mint-100 hover:text-mint-500 dark:hover:text-mint-300 transition-all">
 View all posts...
 </a> </div> </section> </div> </div>  </div> <footer class="relative bottom-0 w-full px-4 py-8 font-medium text-blacktext dark:bg-transparent dark:border-b-2 dark:border-zinc-800 dark:text-zinc-300 max-lg:mt-3" role="contentinfo" aria-label="Site footer"> <nav class="mx-auto flex max-w-7xl flex-row items-center justify-between gap-4 text-xl max-xl:px-6 max-sm:flex-col" aria-label="Footer navigation"> <div class="relative h-6 cursor-pointer before:absolute before:left-1/2 before:top-1/2 before:h-full before:w-[40%] before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-[#50fd8f25] before:blur-3xl before:opacity-80 before:-z-1 hover:text-mint-500 transition-all [text-shadow:0_1px_2px_#000]"> <a href="/" aria-label="Return to homepage"> <!-- This icon represents the logo --> <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <defs> <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%"> <stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1"></stop> <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1"></stop> </linearGradient> </defs> <text x="0" y="18" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="url(#logoGradient)">
 oGYCo
