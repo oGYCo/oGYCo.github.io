@@ -103,6 +103,13 @@ oGYCo
 <h2 id="第一步tokenization--embedding--positional-encoding">第一步—Tokenization &#x26; Embedding &#x26; Positional Encoding</h2>
 <h3 id="分词">分词</h3>
 <h3 id="嵌入向量">嵌入向量</h3>
+<p>就是用一个Embedding矩阵，将词表中的每个词和矩阵中的一个行向量联系起来</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># 本质上是一个大的权重矩阵</span></span>
+<span class="line"><span style="color:#E1E4E8">embedding_matrix.shape </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [vocab_size, d_model]  </span><span style="color:#6A737D"># [30000, 512]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 对于输入的词汇ID</span></span>
+<span class="line"><span style="color:#E1E4E8">word_id </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1234</span></span>
+<span class="line"><span style="color:#E1E4E8">word_vector </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> embedding_matrix[word_id]  </span><span style="color:#6A737D"># 取出对应行作为词向量</span></span></code></pre>
 <h3 id="位置编码">位置编码</h3>
 <p>如果只是有注意力和全连接层，一段序列的位置关系就会被忽略，所以需要引入位置编码
 所谓的位置编码就是给embedding之后的向量加上了一个相同维度的代表这token位置信息的向量（遵循一定的模式），注意是两个向量相加，不是直接拼接在原本的向量后面，虽然应该也可以，但是那样会增加向量的维度导致后面需要的参数量也更多。</p>
