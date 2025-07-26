@@ -3173,12 +3173,14 @@ print(f"模型参数量: {sum(p.numel() for p in model.parameters()):,}")
 ```
 
 这个工厂函数优雅地封装了Transformer的复杂性，使得研究者和工程师能够专注于模型的使用和改进，而不必纠结于繁琐的组装细节。
-    Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
-    Decoder(DecoderLayer(d_model, c(attn), c(attn), c(ff), dropout), N),
-    nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
-    nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
-    Generator(d_model, tgt_vocab),
-)
+```python
+    model = EncoderDecoder(
+        Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
+        Decoder(DecoderLayer(d_model, c(attn), c(attn), c(ff), dropout), N),
+        nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
+        nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
+        Generator(d_model, tgt_vocab),
+    )
 ```
 
 **组装过程分析：**
@@ -3218,14 +3220,6 @@ for p in model.parameters():
 3. **避免饱和**：防止激活函数进入饱和区域
 
 这样，我们就有了一个完整的 Transformer 模型！
-
----
-
-## 继续解释训练和推理部分...
-
-接下来我们会解释模型的训练过程、损失计算、数据处理等重要内容。每一部分都会保持同样详细的解释。
-
----
 
 ## 单元格 50-54：推理测试和简单示例
 
