@@ -2795,37 +2795,51 @@ Transformer 模型通常很大，单个 GPU 可能无法承载。分布式训练
 <span class="line"><span style="color:#E1E4E8">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">f</span><span style="color:#9ECBFF">"模型参数量: </span><span style="color:#79B8FF">{sum</span><span style="color:#E1E4E8">(p.numel() </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> p </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> model.parameters())</span><span style="color:#F97583">:,</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">)</span></span></code></pre>
-<p>这个工厂函数优雅地封装了Transformer的复杂性，使得研究者和工程师能够专注于模型的使用和改进，而不必纠结于繁琐的组装细节。
-Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
-Decoder(DecoderLayer(d_model, c(attn), c(attn), c(ff), dropout), N),
-nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
-nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
-Generator(d_model, tgt_vocab),
-)</p>
-<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span></span></span>
-<span class="line"><span>**组装过程分析：**</span></span>
-<span class="line"><span>1. **编码器**：`Encoder(EncoderLayer(...), N)`</span></span>
-<span class="line"><span>   - 创建一个编码器层的模板</span></span>
-<span class="line"><span>   - 复制 N 次创建完整编码器</span></span>
-<span class="line"><span></span></span>
-<span class="line"><span>2. **解码器**：`Decoder(DecoderLayer(...), N)`</span></span>
-<span class="line"><span>   - 注意解码器层有两个注意力：`c(attn), c(attn)`</span></span>
-<span class="line"><span>   - 第一个是自注意力，第二个是编码器-解码器注意力</span></span>
-<span class="line"><span></span></span>
-<span class="line"><span>3. **源语言嵌入**：`nn.Sequential(Embeddings(...), c(position))`</span></span>
-<span class="line"><span>   - 将嵌入层和位置编码串联</span></span>
-<span class="line"><span>   - 输入先经过嵌入，再加上位置编码</span></span>
-<span class="line"><span></span></span>
-<span class="line"><span>4. **目标语言嵌入**：同源语言嵌入</span></span>
-<span class="line"><span></span></span>
-<span class="line"><span>5. **生成器**：`Generator(d_model, tgt_vocab)`</span></span>
-<span class="line"><span>   - 将解码器输出转换为词汇概率</span></span>
-<span class="line"><span></span></span>
-<span class="line"><span>**参数初始化：**</span></span>
-<span class="line"><span>```python</span></span>
-<span class="line"><span>for p in model.parameters():</span></span>
-<span class="line"><span>    if p.dim() > 1:</span></span>
-<span class="line"><span>        nn.init.xavier_uniform_(p)</span></span></code></pre>
+<p>这个工厂函数优雅地封装了Transformer的复杂性，使得研究者和工程师能够专注于模型的使用和改进，而不必纠结于繁琐的组装细节。</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">    model </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> EncoderDecoder(</span></span>
+<span class="line"><span style="color:#E1E4E8">        Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),</span></span>
+<span class="line"><span style="color:#E1E4E8">        Decoder(DecoderLayer(d_model, c(attn), c(attn), c(ff), dropout), N),</span></span>
+<span class="line"><span style="color:#E1E4E8">        nn.Sequential(Embeddings(d_model, src_vocab), c(position)),</span></span>
+<span class="line"><span style="color:#E1E4E8">        nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),</span></span>
+<span class="line"><span style="color:#E1E4E8">        Generator(d_model, tgt_vocab),</span></span>
+<span class="line"><span style="color:#E1E4E8">    )</span></span></code></pre>
+<p><strong>组装过程分析：</strong></p>
+<ol>
+<li>
+<p><strong>编码器</strong>：<code>Encoder(EncoderLayer(...), N)</code></p>
+<ul>
+<li>创建一个编码器层的模板</li>
+<li>复制 N 次创建完整编码器</li>
+</ul>
+</li>
+<li>
+<p><strong>解码器</strong>：<code>Decoder(DecoderLayer(...), N)</code></p>
+<ul>
+<li>注意解码器层有两个注意力：<code>c(attn), c(attn)</code></li>
+<li>第一个是自注意力，第二个是编码器-解码器注意力</li>
+</ul>
+</li>
+<li>
+<p><strong>源语言嵌入</strong>：<code>nn.Sequential(Embeddings(...), c(position))</code></p>
+<ul>
+<li>将嵌入层和位置编码串联</li>
+<li>输入先经过嵌入，再加上位置编码</li>
+</ul>
+</li>
+<li>
+<p><strong>目标语言嵌入</strong>：同源语言嵌入</p>
+</li>
+<li>
+<p><strong>生成器</strong>：<code>Generator(d_model, tgt_vocab)</code></p>
+<ul>
+<li>将解码器输出转换为词汇概率</li>
+</ul>
+</li>
+</ol>
+<p><strong>参数初始化：</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> p </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> model.parameters():</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> p.dim() </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">        nn.init.xavier_uniform_(p)</span></span></code></pre>
 <p><strong>Xavier 初始化：</strong></p>
 <ul>
 <li>也叫 Glorot 初始化</li>
@@ -2840,10 +2854,6 @@ Generator(d_model, tgt_vocab),
 <li><strong>避免饱和</strong>：防止激活函数进入饱和区域</li>
 </ol>
 <p>这样，我们就有了一个完整的 Transformer 模型！</p>
-<hr>
-<h2 id="继续解释训练和推理部分">继续解释训练和推理部分…</h2>
-<p>接下来我们会解释模型的训练过程、损失计算、数据处理等重要内容。每一部分都会保持同样详细的解释。</p>
-<hr>
 <h2 id="单元格-50-54推理测试和简单示例">单元格 50-54：推理测试和简单示例</h2>
 <h3 id="是什么-模型推理能力的验证器"><strong>是什么：</strong> 模型推理能力的验证器</h3>
 <p>这个函数展示了如何使用未训练的模型进行推理。虽然模型还没有训练，但可以看到推理的完整流程。</p>
