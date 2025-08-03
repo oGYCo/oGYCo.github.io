@@ -9,7 +9,7 @@ image:
 pubDate: 2025-08-03
 tags:
   [
-    "conda", "tricks"
+    "tricks"
   ]
 languages: ["python"]
 ---
