@@ -76,7 +76,7 @@ conda update --all
 conda env list
 ```
 
-### 删除环境
+## 删除环境
 
 ```bash
 conda remove -n your_env_name --all
