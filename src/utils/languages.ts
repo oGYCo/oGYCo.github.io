@@ -118,6 +118,10 @@ export const languages: Record<string, Language> = {
     name: "C++",
     iconName: "c-plusplus",
   },
+  docker: {
+    name: "Docker",
+    iconName: "docker-svgrepo-com",
+  }
 };
 
 export const getLanguage = (lang: string): Language => {

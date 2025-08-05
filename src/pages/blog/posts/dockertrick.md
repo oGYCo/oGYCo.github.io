@@ -6,12 +6,12 @@ description: ""
 image:
   url: "/images/posts/home-tab-build.avif"
   alt: ""
-pubDate: 2025-08-03
+pubDate: 2025-08-05
 tags:
   [
     "tricks"
   ]
-languages: [""]
+languages: ["docker"]
 ---
 ## Docker 是软件世界的“集装箱”
 
