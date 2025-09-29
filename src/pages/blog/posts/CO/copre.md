@@ -11,7 +11,7 @@ tags:
   [
     "Logisim", "Verilog","MIPS"
   ]
-languages: [""]
+languages: ["verilog"]
 ---
 
 CO的第一次上机，寄。。。

@@ -5,6 +5,14 @@ export interface Language {
 }
 
 export const languages: Record<string, Language> = {
+  suiji: {
+    name: "随记",
+    iconName: "memory",
+  },
+  verilog: {
+    name: "Verilog",
+    iconName: "verilog",
+  },
   angular: {
     name: "Angular",
     iconName: "angular",

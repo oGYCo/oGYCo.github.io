@@ -4,7 +4,7 @@ title: 一些碎碎念
 author: oGYCo
 description: ""
 image:
-  url: ""
+  url: "/images/posts/1756644786600.jpeg"
   alt: ""
 pubDate: 2025-09-30
 tags:
