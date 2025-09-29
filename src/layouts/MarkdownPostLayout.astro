@@ -12,6 +12,12 @@ const tweetText = encodeURIComponent(
   `"${frontmatter.title}" - by ${frontmatter.author} | oGYCo`
 );
 import Heading from "../components/ui/Heading.astro";
+import { languages as languageMap } from "../utils/languages";
+
+// Build a safe language list: only valid, non-empty keys defined in language map
+const safeLanguages: string[] = (Array.isArray(frontmatter?.languages) ? frontmatter.languages : [])
+  .filter((l: unknown): l is string => typeof l === "string" && l.trim() !== "")
+  .filter((l: string) => Object.prototype.hasOwnProperty.call(languageMap, l));
 ---
 
 <script>
@@ -75,9 +81,10 @@ import Heading from "../components/ui/Heading.astro";
       <header class="flex flex-col gap-4" id="start">
         <div class="flex gap-2 flex-wrap">
           {
-            frontmatter.languages.map((language: string) => (
-              <Capsule lang={language} />
-            ))
+            safeLanguages.length > 0 &&
+              safeLanguages.map((language: string) => (
+                <Capsule lang={language} />
+              ))
           }
         </div>
         <div class="gap-3 flex flex-wrap justify-start items-center">
