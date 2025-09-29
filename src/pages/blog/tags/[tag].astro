@@ -4,15 +4,21 @@ import BlogPost from '../../../components/blog/BlogPost.astro';
 import Heading from '../../../components/ui/Heading.astro';
 
 export async function getStaticPaths() {
-    const allPosts: any[] = await Astro.glob("../posts/*.md");
+    // Include posts in nested folders
+    const allPosts: any[] = await Astro.glob("../posts/**/*.md");
 
     const uniqueTags: string[] = [
-        ...new Set(allPosts.map((post: any) => post.frontmatter.tags).flat()),
+        ...new Set(
+            allPosts
+                .map((post: any) => post.frontmatter?.tags ?? [])
+                .flat()
+                .filter((t: unknown): t is string => typeof t === "string" && t.trim() !== "")
+        ),
     ];
 
     return uniqueTags.map((tag) => {
         const filteredPosts = allPosts.filter((post) =>
-            post.frontmatter.tags.includes(tag),
+            Array.isArray(post.frontmatter?.tags) && post.frontmatter.tags.includes(tag),
         );
         return {
             params: { tag },

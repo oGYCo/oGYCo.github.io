@@ -22,7 +22,8 @@ const {
   titleGradient = "Posts",
 } = Astro.props;
 
-const allPosts = await Astro.glob("../../pages/blog/posts/*.md");
+// Support posts in subdirectories as well
+const allPosts = await Astro.glob("../../pages/blog/posts/**/*.md");
 // Sort by date in descending order (newest first)
 allPosts.sort((a, b) => {
   const dateA = new Date(a.frontmatter.pubDate).getTime();

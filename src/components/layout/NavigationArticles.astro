@@ -1,5 +1,6 @@
 ---
-const allPosts = await Astro.glob("../../pages/blog/posts/*.md");
+// Include posts in nested folders
+const allPosts = await Astro.glob("../../pages/blog/posts/**/*.md");
 
 
 // Ensure posts have a date before sorting them
