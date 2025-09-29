@@ -12,7 +12,6 @@ const ogimage = {
 const currentUrl = `${Astro.site}${Astro.url.pathname}`;
 const tweetText = encodeURIComponent(`"${pageTitle}"`);
 import Heading from "../../../components/ui/Heading.astro";
-import Share from "../../../components/ui/Share.astro";
 
 import Languages from "../../../components/blog/Languages.astro";
 ---
@@ -45,7 +44,6 @@ import Languages from "../../../components/blog/Languages.astro";
           </div>
         </div>
         <div class="my-8 flex justify-end">
-          <Share currentUrl={currentUrl} tweetText={tweetText} />
         </div>
       </div>
     </div>

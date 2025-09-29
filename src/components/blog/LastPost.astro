@@ -15,7 +15,14 @@ const latestPost = allPosts.reduce((latest, current) => {
 });
 
 const tags = [...new Set(latestPost.frontmatter.tags ?? [])];
-const languages = [...new Set(latestPost.frontmatter.languages ?? [])];
+import { languages as languageMap } from "../../utils/languages";
+const languages = [
+  ...new Set(
+    (latestPost.frontmatter.languages ?? [])
+      .filter((l: unknown): l is string => typeof l === "string" && l.trim() !== "")
+  .filter((l: string) => Object.prototype.hasOwnProperty.call(languageMap, l))
+  ),
+];
 const image = latestPost.frontmatter.image.url;
 const imageAlt =
   latestPost.frontmatter.image.alt || latestPost.frontmatter.title;
