@@ -11,7 +11,7 @@ tags:
   [
     "随记"
   ]
-languages: [""]
+languages: ["suiji"]
 ---
 写于凌晨1点：
 
