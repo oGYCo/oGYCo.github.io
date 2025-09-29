@@ -8,17 +8,12 @@ export async function getStaticPaths() {
     const allPosts: any[] = await Astro.glob("../posts/**/*.md");
 
     const uniqueTags: string[] = [
-        ...new Set(
-            allPosts
-                .map((post: any) => post.frontmatter?.tags ?? [])
-                .flat()
-                .filter((t: unknown): t is string => typeof t === "string" && t.trim() !== "")
-        ),
+        ...new Set(allPosts.map((post: any) => post.frontmatter.tags).flat()),
     ];
 
     return uniqueTags.map((tag) => {
         const filteredPosts = allPosts.filter((post) =>
-            Array.isArray(post.frontmatter?.tags) && post.frontmatter.tags.includes(tag),
+            post.frontmatter.tags.includes(tag),
         );
         return {
             params: { tag },

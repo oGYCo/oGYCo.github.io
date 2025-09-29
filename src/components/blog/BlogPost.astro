@@ -5,12 +5,6 @@ import Tag from "../ui/Tag.astro";
 import ReadMore from "../ui/ReadMore.astro";
 import DatePub from "./DatePub.astro";
 import Capsule from "../ui/Capsule.astro";
-import { languages as languageMap } from "../../utils/languages";
-
-// Only display valid, non-empty languages that exist in our language map
-const safeLanguages: string[] = (Array.isArray(languages) ? languages : [])
-    .filter((l: unknown): l is string => typeof l === "string" && l.trim() !== "")
-    .filter((l) => Object.prototype.hasOwnProperty.call(languageMap, l));
 
 ---
 
@@ -23,7 +17,8 @@ const safeLanguages: string[] = (Array.isArray(languages) ? languages : [])
         </a>
         <div class="gap-3 mt-3 flex flex-col">
             <div class="flex gap-2 flex-wrap">
-                {safeLanguages.length > 0 && safeLanguages.map((language: string) => <Capsule lang={language} />)} 
+              
+                 {languages.length > 0 && languages.map((language: string) => <Capsule lang={language} />)} 
             </div>
             <div class="gap-2 flex flex-wrap justify-start items-center">
                 {tags.length > 0 && tags.map((tag: string) => <Tag tag={tag}>{tag}</Tag>)}

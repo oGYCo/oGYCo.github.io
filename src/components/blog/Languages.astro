@@ -2,9 +2,7 @@
 // Include posts in nested folders
 const allPosts = await Astro.glob("../../pages/blog/posts/**/*.md");
 const languages = [
-  ...new Set(allPosts.map((post) => post.frontmatter?.languages ?? []).flat()
-      .filter((l: unknown): l is string => typeof l === "string" && l.trim() !== "")
-  ),
+  ...new Set(allPosts.map((post) => post.frontmatter.languages).flat()),
 ];
 import Capsule from "../ui/Capsule.astro";
 
