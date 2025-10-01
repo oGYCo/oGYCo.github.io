@@ -66,16 +66,39 @@ CO的第一次上机，寄。。。
 #### 最终结果
 ![alt text](image-7.png)
 
-~~重做一遍的时候忘记dx和dy是1位输入要用bit extender扩展为3位置了。。。~~~~
+~~重做一遍的时候忘记dx和dy是1位输入要用bit extender扩展为3位置了。。。~~
 ## Verilog
 忘记语法了。。。
 
 ISE语言模板在edit->language templates
 
-后面来好好整理一下这个语言模板怎么看
+后面看一下语言模板![alt text](image-8.png)
+
+### 题目
+![alt text](image-9.png)
+看了之后有点气笑了
+
+直接把a0，a1...a7全部取出来，然后累加一下就行了，不过需要注意的是评测机的版本比较老，似乎**不支持用integer作为索引，必须使用常量**。。。
+
+>还有就是其实不需要管题目所说的对16取模，因为溢出了之后相当于直接取了后四位也就自动取模了
+
+所以也就没法用循环了，直接取出来然后加上就可
+### 代码
+![alt text](image-10.png)
 
 ## MIPS汇编
 汇编写的不够优雅，指令不熟悉
 
+比较不熟悉的地方是内存的各种操作
 
+### 题目
+![alt text](image-16.png)
+### 代码
+易错的地方：
+- 用i和j去算index的时候**不要改变i和j本身的值**（还要用于后续的循环）,要养成**函数传参的时候不改变原始的值**的好习惯
+  - ![alt text](image-11.png)
 
+![alt text](image-12.png)
+![alt text](image-13.png)
+![alt text](image-14.png)
+![alt text](image-15.png)
