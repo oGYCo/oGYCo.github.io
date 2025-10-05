@@ -4,7 +4,7 @@ title: 论文-医嘱生成与健康预测
 author: oGYCo
 description: "一个是cross-attention变体一个是类似GraphRAG"
 image:
-  url: "image-8.png"
+  url: "/images/posts/3R.png"
   alt: ""
 pubDate: 2025-10-05
 tags:
