@@ -106,3 +106,18 @@ REASONING-ENHANCED HEALTHCARE PREDICTIONS WITH KNOWLEDGE GRAPH COMMUNITY RETRIEV
     - ![alt text](image-9.png)
     - 即后续相同的实体衰减就会更强，从而保证不会都选到一样的内容
     - 然后迭代选N个社群，再将N个社群的summary和基础语境结合就构建了最终的语境信息
+#### 3.3模型训练
+- 用大模型进行蒸馏得到训练数据（思维链和标签）
+- 多任务微调小模型
+
+#### 实验
+
+- 评估指标计算
+  - 准确性
+    - ![alt text](image-10.png)
+  - Macro-F1
+    - ![alt text](image-8.png)
+  - 灵敏度（正确识别高风险的能力）
+    - 就是召回率
+  - Specificity（正确识别低风险的准确性）
+    - ![alt text](image-11.png)
