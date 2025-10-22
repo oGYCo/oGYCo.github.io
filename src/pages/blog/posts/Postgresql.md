@@ -4,7 +4,7 @@ title: Postgresql 数据库
 author: oGYCo
 description: ""
 image:
-  url: "/images/posts/markdown.webp"
+  url: "/images/posts/126475690_p1.jpg"
   alt: ""
 pubDate: 2025-10-23
 tags:
