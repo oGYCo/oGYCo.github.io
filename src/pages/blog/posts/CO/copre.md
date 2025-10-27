@@ -9,7 +9,7 @@ image:
 pubDate: 2025-09-30
 tags:
   [
-    "Logisim", "Verilog","MIPS"
+    "Logisim", "Verilog","MIPS","BUAA_CO"
   ]
 languages: ["verilog"]
 ---
