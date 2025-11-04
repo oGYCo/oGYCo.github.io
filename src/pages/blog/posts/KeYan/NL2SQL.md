@@ -26,4 +26,4 @@ languages: ["markdown"]
 
 #### Revision Reward Model Training
 ![alt text](Screenshot_20251031_003645.jpg)
-![alt text](Screenshot_20251031_001617-1.jpg)
+![alt text](Screenshot_20251031_005132.jpg)
