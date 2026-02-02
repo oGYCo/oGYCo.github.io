@@ -9,7 +9,7 @@ image:
 pubDate: 2026-02-01
 tags:
   [
-    "AI"
+    "AI", "nanochat"
   ]
 languages: ["python"]
 ---
