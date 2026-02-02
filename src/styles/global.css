@@ -306,26 +306,12 @@ a.inline-block.leading-5.pl-12 {
 }
 
 /* KaTeX 数学公式暗色模式支持 */
-.dark .katex {
-	@apply text-white;
+.dark .katex,
+.dark .katex * {
+	color: #ffffff !important;
 }
 
-.dark .katex .mord,
-.dark .katex .mop,
-.dark .katex .mbin,
-.dark .katex .mrel,
-.dark .katex .mopen,
-.dark .katex .mclose,
-.dark .katex .mpunct,
-.dark .katex .minner,
-.dark .katex .mspace {
-	@apply text-white;
-}
-
-.dark .katex .base {
-	@apply text-white;
-}
-
-.dark .katex-display>.katex {
-	@apply text-white;
+.dark .katex-display,
+.dark .katex-display * {
+	color: #ffffff !important;
 }
