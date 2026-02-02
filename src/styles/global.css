@@ -122,15 +122,18 @@ a.inline-block.leading-5.pl-12 {
 
 .markdown a {
 	@apply text-xl max-md:text-lg font-semibold underline transition-all;
-	color: #3b82f6;
+}
+
+.markdown a {
+	color: #3b82f6 !important;
 }
 
 .dark .markdown a {
-	color: #7dd3fc;
+	color: #7dd3fc !important;
 }
 
 .markdown a:hover {
-	color: #38bdf8;
+	color: #38bdf8 !important;
 }
 
 .markdown ol {
