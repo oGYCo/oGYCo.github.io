@@ -121,7 +121,16 @@ a.inline-block.leading-5.pl-12 {
 }
 
 .markdown a {
-	@apply text-xl max-md:text-lg font-semibold dark:text-riptide-300 ! text-mint-500 ! underline hover:text-riptide-400 ! transition-all;
+	@apply text-xl max-md:text-lg font-semibold underline transition-all;
+	color: #3b82f6;
+}
+
+.dark .markdown a {
+	color: #7dd3fc;
+}
+
+.markdown a:hover {
+	color: #38bdf8;
 }
 
 .markdown ol {
@@ -199,7 +208,9 @@ a.inline-block.leading-5.pl-12 {
 }
 
 .expanded {
-	@apply transition-all duration-700 w-full flex ! flex-col ! left-0 top-full mt-4 absolute shadow-xl dark:text-zinc-300 bg-linear-to-t from-white to-white/90 dark:from-zinc-950 dark:to-zinc-950/80 bg-clip-padding backdrop-filter backdrop-blur backdrop-saturate-100 backdrop-contrast-100;
+	@apply transition-all duration-700 w-full left-0 top-full mt-4 absolute shadow-xl dark:text-zinc-300 bg-linear-to-t from-white to-white/90 dark:from-zinc-950 dark:to-zinc-950/80 bg-clip-padding backdrop-filter backdrop-blur backdrop-saturate-100 backdrop-contrast-100;
+	display: flex !important;
+	flex-direction: column !important;
 }
 
 
