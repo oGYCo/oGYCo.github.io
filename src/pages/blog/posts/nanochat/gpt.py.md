@@ -26,6 +26,7 @@ languages: ["python"]
   - [KV缓存与因果注意力机制](#kv缓存与因果注意力机制)
   - [MHA、MQA、GQA](#mhamqagqa)
   - [MLP(FFN)](#mlpffn)
+  - [Value Embedding和门控](#value-embedding和门控)
 - [待补充](#待补充)
 
 ---
@@ -58,6 +59,10 @@ $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 $$
 
+![alt text](Gemini_Generated_Image_r1i3ycr1i3ycr1i3.png)
+多头注意力：
+![alt text](MHA.png)
+
 ### KV缓存与因果注意力机制
 对于像GPT这样的decoder only架构，模型采用的是因果注意力，也就是当前的token只能看到它来自它前面的token的信息，现在会影响未来，但是未来不能影响过去，所以在不断的预测下一个词的时候当前的这个token在计算了QKV之后只会受到来自它前面的token的信息的更新，也就是说就算是后面token被预测出来之后当前token通过模型之后每一层计算出来的QKV也是一样的，所以我们就可以采用空间换时间的办法，直接把KV存起来，后面token通过模型的时候只需要计算这个token的QKV然后与前面token的KV缓存进行计算即可完成当前token的更新，这样就不用每一次都把整个序列一遍又一遍的喂到模型当中，每一次我只需要喂序列中的最后一个token，然后让这个token通过模型然后与前面序列的KV缓存进行交互计算即可，计算结束再把当前这个token的KV缓存起来。
 
@@ -72,9 +77,9 @@ $$
 - MQA：多查询注意力，所有的Query头都共用同一组Key和Value
 - GQA：分组查询注意力，将Query头分为G组，每一组的Query头共用一套Key和Value矩阵
 
+MHA需要存储的KV缓存最多，GQA次之，MQA需要存储的KV缓存最少，当然性能肯定是MHA最好
 
 这么看的话，是不是跟计算机的Cache映射的三种机制很相似呢，直接映射、组相联、全相联，最后用的最多也是组相联机制
-
 
 ### MLP(FFN)
 一般在transformer中用到的FFN就是一个MLP，也就是多层感知机，而这个感知机其实就是两个线性层加上一个激活函数的处理。
@@ -83,6 +88,8 @@ $$
 ![alt text](mlp.png)
 
 值得注意的是，Karpathy的代码中使用的激活函数操作是先经过ReLU之后再平方，为什么要这么做呢，我们先放一放
+
+### Value Embedding和门控
 
 
 ## 待补充
@@ -93,7 +100,6 @@ $$
 - Value Embedding（值嵌入）
 - SelfAttention和各种注意力的变体
 - 激活函数与ReLU之后平方
-- 残差连接
 - flash attention
 - 词嵌入
 - 优化器
