@@ -59,7 +59,7 @@ $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 $$
 
-![alt text](Gemini_Generated_Image_r1i3ycr1i3ycr1i3.png)
+![alt text](attention.png)
 多头注意力：
 ![alt text](MHA.png)
 
