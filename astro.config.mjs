@@ -4,6 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import preact from "@astrojs/preact";
 import sitemap from "@astrojs/sitemap"
 import icon from "astro-icon";
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 // https://astro.build/config
 export default defineConfig({
@@ -19,6 +21,8 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   markdown: {
+    remarkPlugins: [remarkMath],
+    rehypePlugins: [rehypeKatex],
     shikiConfig: {
       theme: 'github-dark'
     },
