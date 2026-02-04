@@ -147,23 +147,21 @@ import Heading from "../components/ui/Heading.astro";
           data-input-position="top"
           data-theme="preferred_color_scheme"
           data-lang="zh-CN"
-          data-loading="lazy"
           crossorigin="anonymous"
-          async
-        ></script>
+          async></script>
       </div>
 
       <!-- Giscus 主题切换脚本 -->
       <script>
         function updateGiscusTheme() {
-          const isDark = document.documentElement.classList.contains('dark');
-          const theme = isDark ? 'dark' : 'light';
-          
-          const iframe = document.querySelector('iframe.giscus-frame');
+          const isDark = document.documentElement.classList.contains("dark");
+          const theme = isDark ? "dark" : "light";
+
+          const iframe = document.querySelector("iframe.giscus-frame");
           if (iframe) {
             iframe.contentWindow.postMessage(
               { giscus: { setConfig: { theme } } },
-              'https://giscus.app'
+              "https://giscus.app",
             );
           }
         }
@@ -171,7 +169,7 @@ import Heading from "../components/ui/Heading.astro";
         // 监听主题变化
         const observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
-            if (mutation.attributeName === 'class') {
+            if (mutation.attributeName === "class") {
               updateGiscusTheme();
             }
           });
@@ -180,11 +178,11 @@ import Heading from "../components/ui/Heading.astro";
         // 开始观察 html 元素的 class 变化
         observer.observe(document.documentElement, {
           attributes: true,
-          attributeFilter: ['class']
+          attributeFilter: ["class"],
         });
 
         // 页面加载完成后设置初始主题
-        window.addEventListener('load', () => {
+        window.addEventListener("load", () => {
           setTimeout(updateGiscusTheme, 1000);
         });
       </script>
