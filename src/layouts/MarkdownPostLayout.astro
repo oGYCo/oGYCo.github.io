@@ -90,7 +90,16 @@ import Heading from "../components/ui/Heading.astro";
         <div class="gap-3 flex flex-wrap justify-start items-center">
           {frontmatter.tags.map((tag: string) => <Tag tag={tag}>{tag}</Tag>)}
         </div>
-        <DatePub date={frontmatter.pubDate} />
+        <div class="flex items-center gap-4 flex-wrap">
+          <DatePub date={frontmatter.pubDate} />
+          <span class="text-sm text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span id="busuanzi_value_page_pv">-</span> 次阅读
+          </span>
+        </div>
 
         <Heading text={frontmatter.title} />
 
@@ -187,6 +196,9 @@ import Heading from "../components/ui/Heading.astro";
           setTimeout(updateGiscusTheme, 1000);
         });
       </script>
+
+      <!-- 不蒜子统计脚本 -->
+      <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
     </article>
     <NavArticle title={frontmatter.title} />
   </section>
