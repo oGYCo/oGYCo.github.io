@@ -27,6 +27,7 @@ languages: ["python"]
   - [MHA、MQA、GQA](#mhamqagqa)
   - [MLP(FFN)](#mlpffn)
   - [Value Embedding和门控](#value-embedding和门控)
+  - [旋转位置编码](#旋转位置编码)
 - [待补充](#待补充)
 
 ---
@@ -52,6 +53,9 @@ torch.nn就是神经网络的层的类，一个具体的深度学习神经网络
 
 >关于注意力机制、多头注意力机制、前馈神经网络、残差连接的更加具体的理解可以看我的这篇[博客](https://ogyco.github.io/blog/posts/TransformerFromScratch/#%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6)，感觉还是讲解的比较详细和清楚
 
+>一个小点：PyTorch中的`view()`方法和`reshape()`方法的区别 \
+`view()`方法不改动内存中存储的tensor数据，而只是修改tensor的meta data，这样的速度是最快的，同时`view()`方法会要求tensor数据在内存中是连续的（**注意连续的定义是在最内层维度移动1步，内存地址也只移动1步**），比如如果对tensor进行了`transpose`操作的话`view()`方法就会报错。所以经常会看到先调用`.contiguous()`让tensor数据连续，然后再调用`view()`方法。\
+`reshape()`方法则是一个更鲁棒的版本，如果tensor连续，则等同于`view`方法，如果不连续的话，会先复制一份数据让其连续再改变形状。
 ### Attention
 简单理解attention机制就是让某个token能够关注到来自序列中其他token的信息然后更新自己，起到了一个融合信息的作用。那么其计算公式我们就可以想到，对于序列中的某个token来说，它对于序列中的每一个其他的token所需要的关注程度是不同的，那么我们就需要为每一个token计算出来一个注意力分数，然后让序列中所有token对应的注意力分数的和为1，那么每个token的注意力分数就是其注意力权重，我们再做来自每个token信息的加权和就可以得到当前token需要关注的来自整个序列的信息
 
@@ -60,7 +64,7 @@ $$
 $$
 
 ![alt text](attention.png)
-多头注意力：
+多头注意力：（~~图有点小问题但是问题不大~~）
 ![alt text](MHA.png)
 
 ### KV缓存与因果注意力机制
@@ -90,6 +94,10 @@ MHA需要存储的KV缓存最多，GQA次之，MQA需要存储的KV缓存最少�
 值得注意的是，Karpathy的代码中使用的激活函数操作是先经过ReLU之后再平方，为什么要这么做呢，我们先放一放
 
 ### Value Embedding和门控
+通过将最开始输入的x的embedding向量经过变换以后作为一个类似于残差连接的东西加到v上，我们可以将最开始的token的初始信息传递到模型的深层中去，这样相当于建立了一条高速通道，让token在随着神经网络向着深层传递的时候依然能够获得最初的信息。不过这种做法的具体的来源我还没有找到，后续会进行补充。
+
+然后代码中还加入了一个门控的机制，就是让模型自主学习到特定情景下需要用到多少来自初始token的embedding信息，起到一个自适应的作用。
+### 旋转位置编码
 
 
 ## 待补充
@@ -97,7 +105,7 @@ MHA需要存储的KV缓存最多，GQA次之，MQA需要存储的KV缓存最少�
 - GPTconfig的滑动窗口注意力模式
 - RMS Norm归一化
 - RoPE（旋转位置编码）
-- Value Embedding（值嵌入）
+- Resformer出处
 - SelfAttention和各种注意力的变体
 - 激活函数与ReLU之后平方
 - flash attention
