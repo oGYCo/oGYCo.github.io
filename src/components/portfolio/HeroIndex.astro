@@ -68,12 +68,7 @@ const [staticData] = await getCollection('staticData');
           >
         </p>
 
-        <div class="flex gap-4 max-sm:flex-col max-sm:items-center">
-          <Button
-            link={"mailto:" + staticData.data.email}
-            text={staticData.data.contactSectionButtonText}
-            iconName={staticData.data.emailIconName}
-          />
+        <div class="max-sm:flex max-sm:justify-center">
           <Button
             link={staticData.data.profileLink}
             text="About Me"
