@@ -160,13 +160,17 @@ $$
 
 假设输入向量$x$的维度为$d$，RMSNorm的计算步骤如下：
 - 计算均方根:衡量向量$x$的模长（能量大小）$\epsilon$ 是为了防止分母为0的极小值
-  $$RMS(x) = \sqrt{\frac{1}{d} \sum_{i=1}^{d} x_i^2 + \epsilon}$$
+$$
+RMS(x) = \sqrt{\frac{1}{d} \sum_{i=1}^{d} x_i^2 + \epsilon}
+$$
 - 归一化:将$x$的每个元素除以RMS值，使其落在统一的尺度上。
 $$
 \bar{x}_i = \frac{x_i}{RMS(x)}
 $$
 - 通常情况下：标准的RMSNorm还会乘上一个可学习的参数向量$g$（gain/weight），nanochat中没有添加：
-$$y_i = \bar{x}_i \cdot g_i$$
+$$
+y_i = \bar{x}_i \cdot g_i
+$$
 
 RMSNorm是LayerNorm的简化版，即没有平移减去均值的操作，hinton的论文中提到归一化的效果主要是来源于缩放而不是平移，减少了计算量的同时还能有相近的性能。
 
