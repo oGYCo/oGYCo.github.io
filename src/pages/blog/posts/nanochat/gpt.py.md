@@ -27,7 +27,9 @@ languages: ["python"]
   - [MHA、MQA、GQA](#mhamqagqa)
   - [MLP(FFN)](#mlpffn)
   - [Value Embedding和门控](#value-embedding和门控)
-  - [旋转位置编码](#旋转位置编码)
+  - [旋转位置编码（RoPE）](#旋转位置编码rope)
+  - [RMS Norm（均方根归一化）](#rms-norm均方根归一化)
+  - [ReLU^2激活函数](#relu2激活函数)
 - [待补充](#待补充)
 
 ---
@@ -97,18 +99,90 @@ MHA需要存储的KV缓存最多，GQA次之，MQA需要存储的KV缓存最少�
 通过将最开始输入的x的embedding向量经过变换以后作为一个类似于残差连接的东西加到v上，我们可以将最开始的token的初始信息传递到模型的深层中去，这样相当于建立了一条高速通道，让token在随着神经网络向着深层传递的时候依然能够获得最初的信息。不过这种做法的具体的来源我还没有找到，后续会进行补充。
 
 然后代码中还加入了一个门控的机制，就是让模型自主学习到特定情景下需要用到多少来自初始token的embedding信息，起到一个自适应的作用。
-### 旋转位置编码
+
+### 旋转位置编码（RoPE）
+序列问题中很重要的一个东西就是位置，模型必须要有能够区分token在序列中位置的能力，因为同样的token内容经过不同的位置排列之后会呈现出完全不同的意思。
+
+nanochat中使用的现代大模型的通用办法，即旋转位置编码。在attention计算的过程中，我们的最终目的就是要计算出当前的token对于其他token最准确的注意力分数，即有的token需要重点关注，而有的token则并不需要怎么关注。
+
+而Q和K是通过内积来计算出注意力分数，那么这个分数就会正比于Q、K向量之间的夹角。而同时，我们希望计算内积的时候，能够自然而然的体现token之间的相对距离。
+
+在二维平面中，我们将向量 $\mathbf{q}$ 逆时针旋转 $m\theta$ 角度，将向量 $\mathbf{k}$ 逆时针旋转 $n\theta$ 角度。这可以通过乘以一个旋转矩阵来实现：
+$$
+f(\mathbf{q}, m) = \begin{pmatrix} \cos m\theta & -\sin m\theta \\ \sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} q_0 \\ q_1 \end{pmatrix}
+$$
+
+$$
+f(\mathbf{k}, n) = \begin{pmatrix} \cos n\theta & -\sin n\theta \\ \sin n\theta & \cos n\theta \end{pmatrix} \begin{pmatrix} k_0 \\ k_1 \end{pmatrix}
+$$
+
+然后计算内积：
+$$
+\text{Score} = |\mathbf{q}| |\mathbf{k}| \cos(\underbrace{(\phi_q - \phi_k)}_{\text{原本的语义夹角}} + \underbrace{(m - n)\theta}_{\text{相对位置带来的偏移}})
+$$
+这样的话，token之间的距离关系就可以取决于相对位置了，同时还保留了原本的语义信息。
+
+例如两个token很接近（这里是query和key接近，也就是不考虑位置的话二者算出来的注意力分数应该就比较高），那么最终的结果就会由位置信息决定，也就是相对距离的远近，而如果语义完全不相关，即使位置再近，总的分数也会因为语义分量而变得混乱。
+
+而在实际中，向量的维度通常是很高纬度的，RoPE则采用的是两个两个一组的为其添加旋转位置编码：例如，对于维度 $d=4$ 的向量 $[x_0, x_1, x_2, x_3]$，我们将 $(x_0, x_1)$ 分为一组，$(x_2, x_3)$ 分为一组。每组在各自的子空间内进行旋转。
+整体的旋转矩阵是一个分块对角矩阵：
+$$
+R_{\Theta, m}^d = \begin{pmatrix}
+\cos m\theta_0 & -\sin m\theta_0 & 0 & 0 & \cdots \\
+\sin m\theta_0 & \cos m\theta_0 & 0 & 0 & \cdots \\
+0 & 0 & \cos m\theta_1 & -\sin m\theta_1 & \cdots \\
+0 & 0 & \sin m\theta_1 & \cos m\theta_1 & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \ddots
+\end{pmatrix}
+$$
+同时为了区分不同维度的特征，每一组二维子向量使用不同的旋转频率 $\theta_i$。通常沿用 Transformer 中的设定，频率是指数递减的：
+$$
+\theta_i = 10000^{-2i/d}, \quad i \in [0, 1, \dots, d/2-1]
+$$
+即越靠近下方的纬度旋转的角度越小，也就是低频信号，用来捕捉长距离的位置关系（如果靠的很近几乎不会变化），而一开始的纬度转动的角度则很大，是高频信号，用来捕捉近距离的位置关系（靠的很近也能引起比较大的结果的变动）
+
+回顾公式，Attention分数大约正比于（每一个q和k是二维向量也就是原向量的一部分）： 
+$$
+\sum_{i} \cos((m-n)\theta_i + \phi_{q_i} - \phi_{k_i})
+$$ 
+这种从低频到高频的叠加其实就是一种傅立叶变化的思想，最终可以组合形成那种捕捉到复杂的长短距离的波形图。
+
+而在实际的代码实现中，不是采用乘以一个大的旋转矩阵的方式，这样太浪费显存了，会有个计算的技巧是：
+假设向量 $x = [x_0, x_1, x_2, x_3, \dots]$。RoPE 的计算步骤如下：两两分组： 将 $x$ 视为复数向量，或者简单的对 $(x_{2i}, x_{2i+1})$ 操作。
+应用变换：
+$$
+\begin{pmatrix} x_{2i}' \\ x_{2i+1}' \end{pmatrix} = \begin{pmatrix} x_{2i} \cos m\theta_i - x_{2i+1} \sin m\theta_i \\ x_{2i} \sin m\theta_i + x_{2i+1} \cos m\theta_i \end{pmatrix}
+$$
+在PyTorch中，这通常通过下面的trick实现：复制一份 $x$，将两两元素翻转并取负，得到 $\tilde{x} = [-x_1, x_0, -x_3, x_2, \dots]$。计算 $\text{RoPE}(x) = x \otimes \cos(m\Theta) + \tilde{x} \otimes \sin(m\Theta)$。（$\otimes$ 为逐元素乘法）。这样计算复杂度极低，完全是线性的 $O(d)$。
+
+### RMS Norm（均方根归一化）
+归一化的作用：通过强制将每一层的输出拉回到一个固定的尺度（例如均值为0，方差为1），它相当于在每一层都设置了一个“关卡”。无论前一层的计算结果多大或多小，经过Norm层后，都会被“重置”回一个健康的范围。对于Transformer尤为重要：在Attention机制中，由于 Softmax($QK^T$) 的存在，如果输入数值过大，Softmax 会进入“饱和区”，导致梯度几乎为 0。RMSNorm/LayerNorm 确保了输入 Softmax 的数值不会太大，保证了梯度的流动，进而避免梯度消失或者梯度爆炸的问题
+
+假设输入向量$x$的维度为$d$，RMSNorm的计算步骤如下：
+- 计算均方根:衡量向量$x$的模长（能量大小）$\epsilon$ 是为了防止分母为0的极小值
+  $$RMS(x) = \sqrt{\frac{1}{d} \sum_{i=1}^{d} x_i^2 + \epsilon}$$
+- 归一化:将$x$的每个元素除以RMS值，使其落在统一的尺度上。
+$$
+\bar{x}_i = \frac{x_i}{RMS(x)}
+$$
+- 通常情况下：标准的RMSNorm还会乘上一个可学习的参数向量$g$（gain/weight），nanochat中没有添加：
+$$y_i = \bar{x}_i \cdot g_i$$
+
+RMSNorm是LayerNorm的简化版，即没有平移减去均值的操作，hinton的论文中提到归一化的效果主要是来源于缩放而不是平移，减少了计算量的同时还能有相近的性能。
+
+### ReLU^2激活函数
+普通的ReLU在`x=0`会遇到导数不存在的情况，虽然深度学习框架能解决这个问题，但是经过平方之后，`x=0`左边的点导数为0，右边是`x^2`，`x=0右边的点的导数也是0，所以`x=0`处导数存在。
+
+同时，右边变成了x^2，引入了更强非线性，同时增加的计算量也不大，还提升了模型的表达能力。
+
 
 
 ## 待补充
 待补充内容：
 - GPTconfig的滑动窗口注意力模式
-- RMS Norm归一化
-- RoPE（旋转位置编码）
+- RoPE（旋转位置编码）的深度理解
 - Resformer出处
-- SelfAttention和各种注意力的变体
-- 激活函数与ReLU之后平方
-- flash attention
+- flash attention计算
 - 词嵌入
 - 优化器
 - logits
