@@ -61,6 +61,7 @@ oGYCo
 <li><a href="#%E6%97%8B%E8%BD%AC%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81rope">旋转位置编码（RoPE）</a></li>
 <li><a href="#rms-norm%E5%9D%87%E6%96%B9%E6%A0%B9%E5%BD%92%E4%B8%80%E5%8C%96">RMS Norm（均方根归一化）</a></li>
 <li><a href="#relu2%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0">ReLU^2激活函数</a></li>
+<li><a href="#%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3%E6%B3%A8%E6%84%8F%E5%8A%9B">滑动窗口注意力</a></li>
 </ul>
 </li>
 <li><a href="#%E5%BE%85%E8%A1%A5%E5%85%85">待补充</a></li>
@@ -216,13 +217,14 @@ c-4-3.333-8.333-7.667-13 -13l-13-13l77-155 77-156c66 199.333 139 419.667
 <h3 id="relu2激活函数">ReLU^2激活函数</h3>
 <p>普通的ReLU在<code>x=0</code>会遇到导数不存在的情况，虽然深度学习框架能解决这个问题，但是经过平方之后，<code>x=0</code>左边的点导数为0，右边是<code>x^2</code>，<code>x=0右边的点的导数也是0，所以</code>x=0`处导数存在。</p>
 <p>同时，右边变成了x^2，引入了更强非线性，同时增加的计算量也不大，还提升了模型的表达能力。</p>
+<h3 id="滑动窗口注意力">滑动窗口注意力</h3>
+<p>nanochat中采用的是滑动窗口注意力，目的是减少attention的计算量，每一个token不是与序列前面所有的token都进行attention的计算，而是只关注最近的W个token，例如第t个token只关注[t-w,w-1]的token，这样的话计算量就是不是平方增长了，而是线性增长<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>N</mi><mo>×</mo><mi>W</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(N\times W)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">W</span><span class="mclose">)</span></span></span></span></p>
+<p>但是同时呢，nanochat又不是让所有层都使用滑动窗口模式，而是采用了混合模式，即有些层是全注意力，有些层是滑动窗口注意力，防止模型丢失一开始的上下文的同时减少计算量</p>
 <h2 id="待补充">待补充</h2>
 <p>待补充内容：</p>
 <ul>
-<li>GPTconfig的滑动窗口注意力模式</li>
 <li>RoPE（旋转位置编码）的深度理解</li>
 <li>Resformer出处</li>
-<li>flash attention计算</li>
 <li>词嵌入</li>
 <li>优化器</li>
 <li>logits</li>
