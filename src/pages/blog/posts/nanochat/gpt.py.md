@@ -7,6 +7,7 @@ image:
   url: "/images/posts/nanochat.png"
   alt: "Andrej Karpathy's nanochat"
 pubDate: 2026-02-01
+lastUpdate: 2026-02-06
 tags:
   [
     "AI", "Model Architecture", "nanochat"
@@ -184,6 +185,7 @@ RMSNorm是LayerNorm的简化版，即没有平移减去均值的操作，hinton�
 nanochat中采用的是滑动窗口注意力，目的是减少attention的计算量，每一个token不是与序列前面所有的token都进行attention的计算，而是只关注最近的W个token，例如第t个token只关注[t-w,w-1]的token，这样的话计算量就是不是平方增长了，而是线性增长$O(N\times W)$
 
 但是同时呢，nanochat又不是让所有层都使用滑动窗口模式，而是采用了混合模式，即有些层是全注意力，有些层是滑动窗口注意力，防止模型丢失一开始的上下文的同时减少计算量
+
 
 
 ## 待补充
