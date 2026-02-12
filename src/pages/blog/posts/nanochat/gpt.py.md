@@ -7,7 +7,7 @@ image:
   url: "/images/posts/nanochat.png"
   alt: "Andrej Karpathy's nanochat"
 pubDate: 2026-02-01
-lastUpdate: 2026-02-06
+lastUpdate: 2026-02-12
 tags:
   [
     "AI", "Model Architecture", "nanochat"
@@ -32,6 +32,9 @@ languages: ["python"]
   - [RMS Norm（均方根归一化）](#rms-norm均方根归一化)
   - [ReLU^2激活函数](#relu2激活函数)
   - [滑动窗口注意力](#滑动窗口注意力)
+  - [一些其他的优化小trick](#一些其他的优化小trick)
+    - [pad词表](#pad词表)
+- [模型架构](#模型架构)
 - [待补充](#待补充)
 
 ---
@@ -94,6 +97,7 @@ MHA需要存储的KV缓存最多，GQA次之，MQA需要存储的KV缓存最少�
 
 下面这张图在看了我上面提到的另外一篇博客之后再来看应该会有更好的理解
 ![alt text](mlp.png)
+>通过这样看过之后其实我们再来看MLP，其实其中也是蕴含的QKV，输入的向量就是Q，然后第一个矩阵中行向量就是K，然后Q和K的转置相乘也就是经过第一个线性层，再经过激活函数之后就是经过第二个线性层，其中的列向量就可以看成是V，那么这里也就是做一个V的加权求和的过程最终得到一个全新的输出，输入就是query，然后最后得到value
 
 值得注意的是，Karpathy的代码中使用的激活函数操作是先经过ReLU之后再平方，为什么要这么做呢，我们先放一放
 
@@ -186,7 +190,26 @@ nanochat中采用的是滑动窗口注意力，目的是减少attention的计算
 
 但是同时呢，nanochat又不是让所有层都使用滑动窗口模式，而是采用了混合模式，即有些层是全注意力，有些层是滑动窗口注意力，防止模型丢失一开始的上下文的同时减少计算量
 
+### 一些其他的优化小trick
 
+#### pad词表
+经过tokenization之后得到的词表可能会出现奇数这种情况，在现代的GPU中Tensor Cores在处理维度是 8, 16, 32, 64 或 128 的倍数的矩阵时，效率最高，而如果不是，就会因为处理边缘情况导致流水线没有被填满反而导致效率下降。
+
+代码中出现了将词表扩展到这些的倍数的操作，也就是为词表中添加一些实际上不存在的token。
+```python
+padded_vocab_size = ((config.vocab_size + pad_vocab_size_to - 1) // pad_vocab_size_to) * pad_vocab_size_to #这里是一个向上取整除法的做法，即((a + b -1) // b) * b
+if padded_vocab_size != config.vocab_size:
+    print0(f"Padding vocab_size from {config.vocab_size} to {padded_vocab_size} for efficiency")
+```
+实际训练的时候也不会出现这些token的id，然后token经过模型到达最后的预测概率的时候会有一个剪切掉多余的无用token的操作：
+```python
+logits = self.lm_head(x) # (B, T, 50304) -> 维度是 Pad 过的
+logits = logits[..., :self.config.vocab_size] # (B, T, 50257) -> 强行切掉多余部分
+```
+这样就能避免计算概率的时候让多余的词分走一点概率，影响原本的概率分布
+
+## 模型架构
+![alt text](nanochat.png)
 
 ## 待补充
 待补充内容：
